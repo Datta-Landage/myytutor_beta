@@ -48,6 +48,29 @@ logs/
 .DS_Store
 Thumbs.db
 
-### Batch Files (if they contain secrets) ###
-# Uncomment if your .bat files contain passwords
-# *.bat
+### Batch Files & Scripts ###
+*.bat
+*.ps1
+
+### Documentation Files (keep only README.md) ###
+CREATE_WHATSAPP_TEMPLATES.md
+ENTITY_RELATIONSHIPS.md
+GET_GROUP_ID_SIMPLE.md
+GET_WHATSAPP_VALUES_SIMPLE.md
+HOW_TO_GET_WHATSAPP_CREDENTIALS.md
+NEW_WHATSAPP_FLOW.md
+PRODUCTION_READINESS_CHECKLIST.md
+WHATSAPP_COMMUNITY_SETUP.md
+WHATSAPP_CREDENTIALS_VISUAL_GUIDE.md
+WHATSAPP_IMPLEMENTATION_SUMMARY.md
+WHATSAPP_QUICK_REFERENCE.md
+WHATSAPP_QUICK_START.md
+WHATSAPP_SETUP_GUIDE.md
+WHATSAPP_TEMPLATES_SETUP.md
+WHATSAPP_TEMPLATE_CREATION_GUIDE.md
+
+### SQL Scripts (development only) ###
+*.sql
+
+### Python Scripts (local utilities) ###
+*.py
