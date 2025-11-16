@@ -1,0 +1,1300 @@
+<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+  <!-- Compact Hero Section -->
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #2563eb; border-radius: 12px 12px 0 0;">
+    <tr>
+      <td style="padding: 25px 20px; text-align: center;">
+        <!-- Small Icon -->
+        <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 12px auto;">
+          <tr>
+            <td style="background-color: #ffffff; width: 50px; height: 50px; border-radius: 25px; text-align: center; vertical-align: middle;">
+              <span style="font-size: 28px; line-height: 50px;">🎓</span>
+            </td>
+          </tr>
+        </table>
+        
+        <h1 style="color: #ffffff; font-size: 22px; font-weight: 700; margin: 8px 0; font-family: Arial, sans-serif;">
+          🎉 Registration Successful!
+        </h1>
+        <p style="color: #e0f2fe; font-size: 14px; margin: 5px 0; font-family: Arial, sans-serif;">
+          Welcome to the MyyTutor Teaching Community
+        </p>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Congratulations Card -->
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 20px 0;">
+    <tr>
+      <td style="background-color: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; border-radius: 8px;">
+        <h2 style="color: #92400e; font-size: 18px; margin: 0 0 10px 0; font-weight: 600; font-family: Arial, sans-serif;">
+          🎊 Congratulations,
+          <strong th:text="${name}" style="color: #1a73e8;">User</strong>!
+        </h2>
+        <p style="color: #78350f; font-size: 14px; line-height: 1.6; margin: 0; font-family: Arial, sans-serif;">
+          Your teacher registration has been <strong>successfully submitted</strong>! We're thrilled to welcome you to our growing community of passionate educators. 🌟
+        </p>
+      </td>
+    </tr>
+  </table>
+
+    <!-- Teacher Profile Card -->
+    <div
+      style="
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        border: 2px solid #e5e7eb;
+        margin: 30px 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      "
+    >
+      <div style="text-align: center; margin-bottom: 25px">
+        <div
+          style="
+            display: inline-block;
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 4px solid #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+          "
+        >
+          <svg
+            viewBox="0 0 24 24"
+            style="width: 60px; height: 60px; fill: #2563eb"
+          >
+            <path
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+            />
+          </svg>
+        </div>
+        <h3
+          style="
+            color: #1f2937;
+            font-size: 24px;
+            margin: 10px 0 5px 0;
+            font-weight: 700;
+          "
+          th:text="${name}"
+        >
+          Teacher Name
+        </h3>
+        <p style="color: #6b7280; font-size: 15px; margin: 0">
+          MyyTutor Educator
+        </p>
+      </div>
+
+      <div
+        style="
+          background: #f9fafb;
+          padding: 20px;
+          border-radius: 10px;
+          margin: 20px 0;
+        "
+      >
+        <h4
+          style="
+            color: #1f2937;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+            text-align: center;
+          "
+        >
+          📋 Registration Details
+        </h4>
+        <table style="width: 100%; border-collapse: collapse">
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb">
+              <span style="color: #6b7280; font-size: 14px"
+                >📧 Email Address:</span
+              >
+            </td>
+            <td
+              style="
+                padding: 10px 0;
+                border-bottom: 1px solid #e5e7eb;
+                text-align: right;
+              "
+            >
+              <strong style="color: #1f2937; font-size: 14px" th:text="${email}"
+                >user@example.com</strong
+              >
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb">
+              <span style="color: #6b7280; font-size: 14px"
+                >📅 Registration Date:</span
+              >
+            </td>
+            <td
+              style="
+                padding: 10px 0;
+                border-bottom: 1px solid #e5e7eb;
+                text-align: right;
+              "
+            >
+              <strong
+                style="color: #1f2937; font-size: 14px"
+                th:text="${registrationDate}"
+                >Date</strong
+              >
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb">
+              <span style="color: #6b7280; font-size: 14px">📞 Phone:</span>
+            </td>
+            <td
+              style="
+                padding: 10px 0;
+                border-bottom: 1px solid #e5e7eb;
+                text-align: right;
+              "
+            >
+              <strong
+                style="color: #1f2937; font-size: 14px"
+                th:text="${teacher.phoneNumber}"
+                >+91-XXXXXXXXXX</strong
+              >
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb">
+              <span style="color: #6b7280; font-size: 14px">� City:</span>
+            </td>
+            <td
+              style="
+                padding: 10px 0;
+                border-bottom: 1px solid #e5e7eb;
+                text-align: right;
+              "
+            >
+              <strong
+                style="color: #1f2937; font-size: 14px"
+                th:text="${teacher.city}"
+                >City</strong
+              >
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb">
+              <span style="color: #6b7280; font-size: 14px"
+                >💼 Experience:</span
+              >
+            </td>
+            <td
+              style="
+                padding: 10px 0;
+                border-bottom: 1px solid #e5e7eb;
+                text-align: right;
+              "
+            >
+              <strong
+                style="color: #1f2937; font-size: 14px"
+                th:text="${teacher.experience} + ' years'"
+                >0 years</strong
+              >
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0">
+              <span style="color: #6b7280; font-size: 14px">�📊 Status:</span>
+            </td>
+            <td style="padding: 10px 0; text-align: right">
+              <span
+                style="
+                  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                  color: #92400e;
+                  padding: 6px 14px;
+                  border-radius: 20px;
+                  font-size: 13px;
+                  font-weight: 600;
+                  display: inline-block;
+                "
+              >
+                ⏳ Pending Review
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Subjects Section -->
+      <div
+        style="
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+          padding: 20px;
+          border-radius: 10px;
+          margin: 20px 0;
+          border-left: 4px solid #2563eb;
+        "
+      >
+        <h4
+          style="
+            color: #1e40af;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+            text-align: center;
+          "
+        >
+          📚 Subjects You Teach
+        </h4>
+        <div style="text-align: center">
+          <th:block th:each="mapping : ${teacher.subjects}">
+            <span
+              style="
+                display: inline-block;
+                background: #ffffff;
+                color: #1e40af;
+                padding: 8px 16px;
+                border-radius: 20px;
+                margin: 5px;
+                font-size: 13px;
+                font-weight: 500;
+                box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+              "
+              th:text="'Class ' + ${mapping.subjectClass.classId} + ' - ' + ${mapping.subjectClass.subjectName}"
+            >
+              Class 10 - Mathematics
+            </span>
+          </th:block>
+          <th:block th:each="extraMapping : ${teacher.extraSubjects}">
+            <span
+              style="
+                display: inline-block;
+                background: #ffffff;
+                color: #7c3aed;
+                padding: 8px 16px;
+                border-radius: 20px;
+                margin: 5px;
+                font-size: 13px;
+                font-weight: 500;
+                box-shadow: 0 2px 6px rgba(124, 58, 237, 0.15);
+              "
+              th:text="${extraMapping.extraSubject.extraSubjectName}"
+            >
+              English Speaking
+            </span>
+          </th:block>
+        </div>
+      </div>
+
+      <!-- Preferred Areas Section -->
+      <div
+        style="
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          padding: 20px;
+          border-radius: 10px;
+          margin: 20px 0;
+          border-left: 4px solid #f59e0b;
+        "
+      >
+        <h4
+          style="
+            color: #92400e;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+            text-align: center;
+          "
+        >
+          📍 Preferred Teaching Areas
+        </h4>
+        <div style="text-align: center">
+          <th:block th:each="areaMapping : ${teacher.preferredAreas}">
+            <span
+              style="
+                display: inline-block;
+                background: #ffffff;
+                color: #92400e;
+                padding: 8px 16px;
+                border-radius: 20px;
+                margin: 5px;
+                font-size: 13px;
+                font-weight: 500;
+                box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);
+              "
+              th:text="${areaMapping.area}"
+            >
+              Area Name
+            </span>
+          </th:block>
+        </div>
+      </div>
+
+      <!-- Availability Section - Production Level Table -->
+      <div
+        style="
+          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          padding: 20px;
+          border-radius: 10px;
+          margin: 20px 0;
+          border-left: 4px solid #10b981;
+        "
+      >
+        <h4
+          style="
+            color: #065f46;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+            text-align: center;
+          "
+        >
+          🕐 Weekly Availability Schedule
+        </h4>
+        <table
+          style="
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          "
+        >
+          <thead>
+            <tr
+              style="
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              "
+            >
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 13px;
+                  font-weight: 600;
+                  text-align: left;
+                  border-right: 1px solid rgba(255, 255, 255, 0.1);
+                "
+              >
+                Time Slot
+              </th>
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-align: center;
+                  border-right: 1px solid rgba(255, 255, 255, 0.1);
+                "
+              >
+                Mon
+              </th>
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-align: center;
+                  border-right: 1px solid rgba(255, 255, 255, 0.1);
+                "
+              >
+                Tue
+              </th>
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-align: center;
+                  border-right: 1px solid rgba(255, 255, 255, 0.1);
+                "
+              >
+                Wed
+              </th>
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-align: center;
+                  border-right: 1px solid rgba(255, 255, 255, 0.1);
+                "
+              >
+                Thu
+              </th>
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-align: center;
+                  border-right: 1px solid rgba(255, 255, 255, 0.1);
+                "
+              >
+                Fri
+              </th>
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-align: center;
+                  border-right: 1px solid rgba(255, 255, 255, 0.1);
+                "
+              >
+                Sat
+              </th>
+              <th
+                style="
+                  padding: 12px;
+                  color: #ffffff;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-align: center;
+                "
+              >
+                Sun
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <th:block
+              th:each="availability, iterStat : ${teacher.availabilities}"
+            >
+              <tr
+                th:style="${iterStat.odd} ? 'background: #f9fafb;' : 'background: #ffffff;'"
+                style="border-bottom: 1px solid #e5e7eb"
+              >
+                <td
+                  style="
+                    padding: 12px;
+                    color: #1f2937;
+                    font-size: 13px;
+                    font-weight: 500;
+                    border-right: 1px solid #e5e7eb;
+                  "
+                >
+                  <span
+                    th:with="startHour=${availability.startTime / 60}, startMin=${availability.startTime % 60}, endHour=${availability.endTime / 60}, endMin=${availability.endTime % 60}"
+                    th:text="${#numbers.formatDecimal(startHour, 1, 0)} + ':' + ${startMin < 10 ? '0' + #numbers.formatDecimal(startMin, 1, 0) : #numbers.formatDecimal(startMin, 1, 0)} + ' - ' + ${#numbers.formatDecimal(endHour, 1, 0)} + ':' + ${endMin < 10 ? '0' + #numbers.formatDecimal(endMin, 1, 0) : #numbers.formatDecimal(endMin, 1, 0)}"
+                  >
+                    09:00 - 12:00
+                  </span>
+                </td>
+                <td
+                  style="
+                    padding: 12px;
+                    text-align: center;
+                    border-right: 1px solid #e5e7eb;
+                  "
+                >
+                  <span
+                    th:if="${availability.monday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #10b981;
+                      border-radius: 50%;
+                      color: #ffffff;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    th:unless="${availability.monday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #fee2e2;
+                      border-radius: 50%;
+                      color: #dc2626;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✕</span
+                  >
+                </td>
+                <td
+                  style="
+                    padding: 12px;
+                    text-align: center;
+                    border-right: 1px solid #e5e7eb;
+                  "
+                >
+                  <span
+                    th:if="${availability.tuesday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #10b981;
+                      border-radius: 50%;
+                      color: #ffffff;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    th:unless="${availability.tuesday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #fee2e2;
+                      border-radius: 50%;
+                      color: #dc2626;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✕</span
+                  >
+                </td>
+                <td
+                  style="
+                    padding: 12px;
+                    text-align: center;
+                    border-right: 1px solid #e5e7eb;
+                  "
+                >
+                  <span
+                    th:if="${availability.wednesday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #10b981;
+                      border-radius: 50%;
+                      color: #ffffff;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    th:unless="${availability.wednesday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #fee2e2;
+                      border-radius: 50%;
+                      color: #dc2626;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✕</span
+                  >
+                </td>
+                <td
+                  style="
+                    padding: 12px;
+                    text-align: center;
+                    border-right: 1px solid #e5e7eb;
+                  "
+                >
+                  <span
+                    th:if="${availability.thursday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #10b981;
+                      border-radius: 50%;
+                      color: #ffffff;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    th:unless="${availability.thursday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #fee2e2;
+                      border-radius: 50%;
+                      color: #dc2626;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✕</span
+                  >
+                </td>
+                <td
+                  style="
+                    padding: 12px;
+                    text-align: center;
+                    border-right: 1px solid #e5e7eb;
+                  "
+                >
+                  <span
+                    th:if="${availability.friday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #10b981;
+                      border-radius: 50%;
+                      color: #ffffff;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    th:unless="${availability.friday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #fee2e2;
+                      border-radius: 50%;
+                      color: #dc2626;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✕</span
+                  >
+                </td>
+                <td
+                  style="
+                    padding: 12px;
+                    text-align: center;
+                    border-right: 1px solid #e5e7eb;
+                  "
+                >
+                  <span
+                    th:if="${availability.saturday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #10b981;
+                      border-radius: 50%;
+                      color: #ffffff;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    th:unless="${availability.saturday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #fee2e2;
+                      border-radius: 50%;
+                      color: #dc2626;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✕</span
+                  >
+                </td>
+                <td style="padding: 12px; text-align: center">
+                  <span
+                    th:if="${availability.sunday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #10b981;
+                      border-radius: 50%;
+                      color: #ffffff;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    th:unless="${availability.sunday}"
+                    style="
+                      display: inline-block;
+                      width: 24px;
+                      height: 24px;
+                      background: #fee2e2;
+                      border-radius: 50%;
+                      color: #dc2626;
+                      line-height: 24px;
+                      font-weight: bold;
+                      font-size: 14px;
+                    "
+                    >✕</span
+                  >
+                </td>
+              </tr>
+            </th:block>
+          </tbody>
+        </table>
+        <p
+          style="
+            color: #065f46;
+            font-size: 12px;
+            text-align: center;
+            margin: 12px 0 0 0;
+          "
+        >
+          <strong>Legend:</strong>
+          <span style="color: #10b981">✓</span> Available &nbsp;|&nbsp;
+          <span style="color: #dc2626">✕</span> Not Available
+        </p>
+      </div>
+    </div>
+
+    <!-- What Happens Next Section -->
+    <div
+      style="
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        border: 2px solid #e5e7eb;
+        margin: 30px 0;
+        text-align: left;
+      "
+    >
+      <h3
+        style="
+          color: #1f2937;
+          font-size: 22px;
+          margin: 0 0 25px 0;
+          text-align: center;
+          font-weight: 600;
+        "
+      >
+        🚀 What Happens Next?
+      </h3>
+
+      <div style="margin: 20px 0">
+        <!-- Step 1 -->
+        <div style="display: table; width: 100%; margin-bottom: 25px">
+          <div style="display: table-cell; vertical-align: top; width: 50px">
+            <div
+              style="
+                width: 40px;
+                height: 40px;
+                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                border-radius: 50%;
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 18px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+              "
+            >
+              1
+            </div>
+          </div>
+          <div
+            style="display: table-cell; vertical-align: top; padding-left: 15px"
+          >
+            <h4
+              style="
+                color: #1f2937;
+                font-size: 17px;
+                margin: 0 0 8px 0;
+                font-weight: 600;
+              "
+            >
+              📝 Profile Review
+            </h4>
+            <p
+              style="
+                color: #6b7280;
+                font-size: 14px;
+                margin: 0 0 10px 0;
+                line-height: 1.6;
+              "
+            >
+              Our admin team will carefully review your profile, qualifications,
+              and submitted documents. We ensure all teachers meet our quality
+              standards.
+            </p>
+            <div
+              style="
+                background: #eff6ff;
+                padding: 12px;
+                border-radius: 8px;
+                border-left: 3px solid #2563eb;
+              "
+            >
+              <p style="color: #1e40af; font-size: 13px; margin: 0">
+                ⏱️ <strong>Timeline:</strong> Usually completed within
+                <strong>24-48 hours</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="display: table; width: 100%; margin-bottom: 25px">
+          <div style="display: table-cell; vertical-align: top; width: 50px">
+            <div
+              style="
+                width: 40px;
+                height: 40px;
+                background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+                border-radius: 50%;
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 18px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+              "
+            >
+              2
+            </div>
+          </div>
+          <div
+            style="display: table-cell; vertical-align: top; padding-left: 15px"
+          >
+            <h4
+              style="
+                color: #1f2937;
+                font-size: 17px;
+                margin: 0 0 8px 0;
+                font-weight: 600;
+              "
+            >
+              ✅ Approval Notification
+            </h4>
+            <p
+              style="
+                color: #6b7280;
+                font-size: 14px;
+                margin: 0;
+                line-height: 1.6;
+              "
+            >
+              Once approved, you'll receive an email with your
+              <strong>login credentials</strong> and detailed instructions on
+              how to get started with your teaching journey.
+            </p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="display: table; width: 100%">
+          <div style="display: table-cell; vertical-align: top; width: 50px">
+            <div
+              style="
+                width: 40px;
+                height: 40px;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                border-radius: 50%;
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 18px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+              "
+            >
+              3
+            </div>
+          </div>
+          <div
+            style="display: table-cell; vertical-align: top; padding-left: 15px"
+          >
+            <h4
+              style="
+                color: #1f2937;
+                font-size: 17px;
+                margin: 0 0 8px 0;
+                font-weight: 600;
+              "
+            >
+              🎓 Start Teaching
+            </h4>
+            <p
+              style="
+                color: #6b7280;
+                font-size: 14px;
+                margin: 0;
+                line-height: 1.6;
+              "
+            >
+              Log in to your dashboard, complete your profile, and start
+              connecting with students looking for your expertise!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- While You Wait Section -->
+    <div
+      style="
+        background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+        padding: 30px;
+        border-radius: 12px;
+        margin: 30px 0;
+        border-left: 5px solid #2563eb;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+      "
+    >
+      <h3
+        style="
+          color: #1e40af;
+          font-size: 20px;
+          margin: 0 0 20px 0;
+          font-weight: 600;
+          text-align: center;
+        "
+      >
+        📚 While You Wait...
+      </h3>
+      <div style="text-align: left">
+        <table style="width: 100%; border-collapse: collapse">
+          <tr>
+            <td style="padding: 10px 0; vertical-align: top">
+              <div
+                style="
+                  display: inline-block;
+                  width: 28px;
+                  height: 28px;
+                  background: #2563eb;
+                  color: #ffffff;
+                  border-radius: 6px;
+                  text-align: center;
+                  line-height: 28px;
+                  font-weight: bold;
+                  margin-right: 10px;
+                "
+              >
+                ✨
+              </div>
+            </td>
+            <td style="padding: 10px 0">
+              <p
+                style="
+                  color: #1e3a8a;
+                  font-size: 14px;
+                  margin: 0;
+                  line-height: 1.6;
+                "
+              >
+                <strong>Prepare Your Teaching Materials:</strong> Gather
+                resources and materials you'll use in your sessions
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; vertical-align: top">
+              <div
+                style="
+                  display: inline-block;
+                  width: 28px;
+                  height: 28px;
+                  background: #2563eb;
+                  color: #ffffff;
+                  border-radius: 6px;
+                  text-align: center;
+                  line-height: 28px;
+                  font-weight: bold;
+                  margin-right: 10px;
+                "
+              >
+                💡
+              </div>
+              <!-- Stay Connected Card -->
+              <div
+                style="
+                  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+                  padding: 25px;
+                  border-radius: 12px;
+                  border-left: 5px solid #ec4899;
+                  margin: 30px 0;
+                  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.15);
+                "
+              >
+                <h4
+                  style="
+                    color: #831843;
+                    font-size: 16px;
+                    margin: 0 0 12px 0;
+                    font-weight: 600;
+                  "
+                >
+                  💌 Stay Connected!
+                </h4>
+                <p
+                  style="
+                    color: #831843;
+                    margin: 0;
+                    font-size: 14px;
+                    line-height: 1.7;
+                  "
+                >
+                  Make sure to check your email regularly for updates. Add
+                  <strong>noreply@myytutor.com</strong> to your contacts to
+                  ensure our emails reach your inbox.
+                </p>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; vertical-align: top">
+              <div
+                style="
+                  display: inline-block;
+                  width: 28px;
+                  height: 28px;
+                  background: #2563eb;
+                  color: #ffffff;
+                  border-radius: 6px;
+                  text-align: center;
+                  line-height: 28px;
+                  font-weight: bold;
+                  margin-right: 10px;
+                "
+              >
+                📖
+              </div>
+            </td>
+            <td style="padding: 10px 0">
+              <p
+                style="
+                  color: #1e3a8a;
+                  font-size: 14px;
+                  margin: 0;
+                  line-height: 1.6;
+                "
+              >
+                <strong>Explore Our Resources:</strong> Check out our teacher
+                handbook and community guidelines
+              </p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div
+      style="
+        background: #f9fafb;
+        padding: 25px;
+        border-radius: 12px;
+        margin: 30px 0;
+      "
+    >
+      <h3
+        style="
+          color: #1f2937;
+          font-size: 18px;
+          margin: 0 0 15px 0;
+          font-weight: 600;
+        "
+      >
+        💼 Your Profile Summary
+      </h3>
+      <div style="text-align: left; color: #4b5563; font-size: 14px">
+        <p style="margin: 8px 0">
+          <strong>Registered Email:</strong>
+          <span th:text="${email}">user@example.com</span>
+        </p>
+        <p style="margin: 8px 0">
+          <strong>Registration Date:</strong>
+          <span th:text="${registrationDate}">Date</span>
+        </p>
+        <p style="margin: 8px 0">
+          <strong>Status:</strong>
+          <span style="color: #f59e0b; font-weight: 600"
+            >⏳ Pending Review</span
+          >
+        </p>
+      </div>
+    </div>
+
+    <div
+      style="
+        background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #ec4899;
+        margin: 25px 0;
+      "
+    >
+      <p style="color: #831843; margin: 0; font-size: 14px; line-height: 1.6">
+        💌 <strong>Stay Connected!</strong> Make sure to check your email
+        regularly for updates. Add <strong>noreply@myytutor.com</strong> to your
+        contacts to ensure our emails reach your inbox.
+      </p>
+    </div>
+
+    <!-- Community Section -->
+    <div
+      style="
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        border: 2px solid #e5e7eb;
+        margin: 30px 0;
+        text-align: center;
+      "
+    >
+      <div
+        style="
+          display: inline-block;
+          width: 60px;
+          height: 60px;
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          border-radius: 50%;
+          margin-bottom: 15px;
+          padding: 15px;
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        "
+      >
+        <svg
+          viewBox="0 0 24 24"
+          style="width: 30px; height: 30px; fill: #ffffff"
+        >
+          <path
+            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+          />
+        </svg>
+      </div>
+      <h3
+        style="
+          color: #1f2937;
+          font-size: 22px;
+          margin: 10px 0 15px 0;
+          font-weight: 600;
+        "
+      >
+        🤝 Join Our Teaching Community
+      </h3>
+      <p
+        style="
+          color: #4b5563;
+          font-size: 15px;
+          line-height: 1.7;
+          margin: 15px 0;
+        "
+      >
+        Connect with fellow educators, share experiences, and grow together.
+        We're building more than just a platform – we're creating a
+        <strong style="color: #2563eb">family of passionate teachers</strong>.
+      </p>
+    </div>
+
+    <!-- Thank You & Contact Section -->
+    <div style="margin-top: 35px; text-align: center">
+      <div style="margin-bottom: 25px">
+        <h3
+          style="
+            color: #1f2937;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 10px 0;
+          "
+        >
+          Thank you for choosing MyyTutor! 🙏
+        </h3>
+        <p
+          style="
+            color: #6b7280;
+            font-size: 15px;
+            margin: 15px 0;
+            line-height: 1.6;
+          "
+        >
+          We're honored to have you join our mission of making quality education
+          accessible to everyone.
+        </p>
+      </div>
+
+      <div
+        style="
+          background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+          padding: 25px;
+          border-radius: 12px;
+          margin-top: 25px;
+          border: 2px solid #e5e7eb;
+        "
+      >
+        <h4
+          style="
+            color: #1f2937;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+          "
+        >
+          💬 Need Help?
+        </h4>
+        <p style="color: #6b7280; font-size: 14px; margin: 0 0 15px 0">
+          Our support team is available 24/7 to assist you
+        </p>
+        <div style="margin: 15px 0">
+          <div
+            style="
+              display: inline-block;
+              background: #ffffff;
+              padding: 12px 20px;
+              border-radius: 8px;
+              margin: 5px;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            "
+          >
+            <span style="color: #6b7280; font-size: 13px; margin-right: 8px"
+              >📧</span
+            >
+            <a
+              href="mailto:support@myytutor.com"
+              style="
+                color: #2563eb;
+                text-decoration: none;
+                font-weight: 500;
+                font-size: 14px;
+              "
+              >support@myytutor.com</a
+            >
+          </div>
+          <div
+            style="
+              display: inline-block;
+              background: #ffffff;
+              padding: 12px 20px;
+              border-radius: 8px;
+              margin: 5px;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            "
+          >
+            <span style="color: #6b7280; font-size: 13px; margin-right: 8px"
+              >📞</span
+            >
+            <span style="color: #1f2937; font-weight: 500; font-size: 14px"
+              >+91-XXXX-XXXXXX</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
