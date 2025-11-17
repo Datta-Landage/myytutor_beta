@@ -27,6 +27,9 @@ public class WhatsAppConfig {
     @Value("${whatsapp.community.id}")
     private String communityId;
 
+    @Value("${whatsapp.community.invite.link:${whatsapp.community.id}}")
+    private String communityInviteLink;
+
     @Value("${whatsapp.verify.token}")
     private String verifyToken;
 
@@ -53,6 +56,10 @@ public class WhatsAppConfig {
 
     public String getCommunityId() {
         return communityId;
+    }
+
+    public String getCommunityInviteLink() {
+        return communityInviteLink;
     }
 
     public String getVerifyToken() {

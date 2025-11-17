@@ -29,83 +29,121 @@ public class WhatsAppService {
 
     /**
      * 1. Send auto-reply to customer when inquiry is received
+     * Uses approved template: enquiry_confirmation
      */
-    public void sendInquiryConfirmation(String customerPhone, String inquiryId) {
+    public void sendInquiryConfirmation(String customerPhone, String customerName, String inquiryId) {
         try {
             String formattedPhone = formatPhoneNumber(customerPhone);
             
+            // Use approved Meta template: enquiry_confirmation
+            // Template: Hello {{1}}, We have received Your enquiry ID: *{{2}}*. and our team will connect with you within 30 minutes with the best suitable tutor.
             WhatsAppMessageRequest request = WhatsAppMessageRequest.builder()
                     .messagingProduct("whatsapp")
                     .to(formattedPhone)
-                    .type("text")
-                    .text(WhatsAppMessageRequest.TextMessage.builder()
-                            .previewUrl(false)
-                            .body(String.format(
-                                    "✅ Thank you for your inquiry! (ID: %s)\n\n" +
-                                    "We have received your tutoring request. Our team will connect with you soon.\n\n" +
-                                    "📞 You can expect a call within 24 hours.\n\n" +
-                                    "Best regards,\n" +
-                                    "MYY Tutor Team",
-                                    inquiryId
+                    .type("template")
+                    .template(WhatsAppMessageRequest.TemplateMessage.builder()
+                            .name("enquiry_confirmation")
+                            .language(WhatsAppMessageRequest.TemplateMessage.Language.builder()
+                                    .code("en")
+                                    .build())
+                            .components(Arrays.asList(
+                                    WhatsAppMessageRequest.TemplateMessage.Component.builder()
+                                            .type("body")
+                                            .parameters(Arrays.asList(
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(customerName)
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiryId)
+                                                            .build()
+                                            ))
+                                            .build()
                             ))
                             .build())
                     .build();
 
             sendMessage(request);
-            log.info("Sent inquiry confirmation to customer: {}", customerPhone);
+            log.info("✅ Sent inquiry confirmation to customer: {} using template", customerPhone);
         } catch (Exception e) {
-            log.error("Failed to send inquiry confirmation to {}: {}", customerPhone, e.getMessage());
+            log.error("❌ Failed to send inquiry confirmation to {}: {}", customerPhone, e.getMessage());
         }
     }
 
     /**
-     * 2. Send inquiry messages to admin (2 messages)
-     * Message 1: Full details for admin
-     * Message 2: Shareable message for admin to forward to community
+     * 2. Send inquiry summary to community
+     * Uses approved template: enquiry_summary_community
+     * Template: A new enquiry is available for review. Class: {{1}} Subjects: {{2}} Board:{{5}} Location: {{3}} Preferred Time: {{4}} Preferred Date: {{6}}
      */
     public void broadcastInquiryToCommunity(Inquiry inquiry) {
         try {
             String adminPhone = formatPhoneNumber(whatsAppConfig.getAdminPhone());
-            String communityLink = whatsAppConfig.getCommunityId();
             
-            // Get first subject from mappings
-            String subjects = inquiry.getSubjectMappings() != null && !inquiry.getSubjectMappings().isEmpty()
-                    ? inquiry.getSubjectMappings().iterator().next().getSubjectClass().getSubjectName()
-                    : "Multiple Subjects";
+            // Use message field for subjects (contains all subjects as string)
+            String subjects = inquiry.getMessage() != null && !inquiry.getMessage().isEmpty()
+                    ? inquiry.getMessage()
+                    : "Not specified";
 
-            // Message to forward to community (no personal details)
-            String communityMessage = String.format(
-                    "🔔 *NEW INQUIRY ALERT*\n\n" +
-                    "📋 Inquiry ID: *#%s*\n" +
-                    "📚 Subject: *%s*\n" +
-                    "🏫 Class: *%s*\n" +
-                    "📍 Area: *%s*\n" +
-                    "⏰ Start Date: *%s*\n\n" +
-                    "💡 *Interested?*\n" +
-                    "Reply to this message with: *YES*\n\n" +
-                    "_Forward this message to teacher community_",
-                    inquiry.getId(),
-                    subjects,
-                    inquiry.getClassStandard(),
-                    inquiry.getAddress(),
-                    inquiry.getSelectedStartDate() != null ? inquiry.getSelectedStartDate().toString() : "Flexible"
-            );
+            // Convert minutes to readable time format
+            String preferredTime = "Flexible";
+            if (inquiry.getSelectedStartTime() != null) {
+                preferredTime = formatTimeFromMinutes(inquiry.getSelectedStartTime());
+                if (inquiry.getSelectedEndTime() != null) {
+                    preferredTime += " - " + formatTimeFromMinutes(inquiry.getSelectedEndTime());
+                }
+            }
+            
+            String preferredDate = inquiry.getSelectedStartDate() != null 
+                    ? inquiry.getSelectedStartDate().toString() 
+                    : "Flexible";
 
-            WhatsAppMessageRequest communityRequest = WhatsAppMessageRequest.builder()
+            // Use approved template: enquiry_summary_community
+            WhatsAppMessageRequest request = WhatsAppMessageRequest.builder()
                     .messagingProduct("whatsapp")
                     .to(adminPhone)
-                    .type("text")
-                    .text(WhatsAppMessageRequest.TextMessage.builder()
-                            .previewUrl(false)
-                            .body(communityMessage)
+                    .type("template")
+                    .template(WhatsAppMessageRequest.TemplateMessage.builder()
+                            .name("enquiry_summary_community")
+                            .language(WhatsAppMessageRequest.TemplateMessage.Language.builder()
+                                    .code("en")
+                                    .build())
+                            .components(Arrays.asList(
+                                    WhatsAppMessageRequest.TemplateMessage.Component.builder()
+                                            .type("body")
+                                            .parameters(Arrays.asList(
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getClassStandard())
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(subjects)
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getAddress())
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(preferredTime)
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getBoard() != null ? inquiry.getBoard() : "Not specified")
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(preferredDate)
+                                                            .build()
+                                            ))
+                                            .build()
+                            ))
                             .build())
                     .build();
 
-            sendMessage(communityRequest);
-            log.info("✅ Sent shareable inquiry message to admin for inquiry #{}", inquiry.getId());
-            
-            // Small delay between messages
-            Thread.sleep(500);
+            sendMessage(request);
+            log.info("✅ Sent community inquiry summary using template for inquiry #{}", inquiry.getId());
             
         } catch (Exception e) {
             log.error("❌ Failed to send community message: {}", e.getMessage());
@@ -119,68 +157,61 @@ public class WhatsAppService {
         try {
             String adminPhone = formatPhoneNumber(whatsAppConfig.getAdminPhone());
             
-            // Get all subjects
-            StringBuilder subjectsList = new StringBuilder();
-            if (inquiry.getSubjectMappings() != null && !inquiry.getSubjectMappings().isEmpty()) {
-                inquiry.getSubjectMappings().forEach(mapping -> 
-                    subjectsList.append("  • ").append(mapping.getSubjectClass().getSubjectName()).append("\n")
-                );
-            }
-            if (inquiry.getExtraSubjectMappings() != null && !inquiry.getExtraSubjectMappings().isEmpty()) {
-                inquiry.getExtraSubjectMappings().forEach(mapping -> 
-                    subjectsList.append("  • ").append(mapping.getExtraSubject().getExtraSubjectName()).append(" (Extra)\n")
-                );
-            }
+            // Use message field for subjects (contains all subjects as string)
+            String subjects = inquiry.getMessage() != null && !inquiry.getMessage().isEmpty()
+                    ? inquiry.getMessage()
+                    : "Not specified";
 
-            String message = String.format(
-                    "📨 *NEW INQUIRY - FULL DETAILS*\n\n" +
-                    "🆔 Inquiry ID: *#%s*\n" +
-                    "━━━━━━━━━━━━━━━━━━\n\n" +
-                    "👤 *Student Information:*\n" +
-                    "• Name: %s\n" +
-                    "• Phone: %s\n" +
-                    "• Standard: %s\n" +
-                    "• Board: %s\n\n" +
-                    "� *Requested Subjects:*\n" +
-                    "%s\n" +
-                    "📍 *Location:*\n" +
-                    "• Address: %s\n\n" +
-                    "⏰ *Schedule:*\n" +
-                    "• Start Date: %s\n" +
-                    "• End Date: %s\n" +
-                    "• Start Time: %s\n" +
-                    "• End Time: %s\n\n" +
-                    "📝 *Additional Message:*\n" +
-                    "%s\n\n" +
-                    "━━━━━━━━━━━━━━━━━━\n" +
-                    "⏱️ Received: %s",
-                    inquiry.getId(),
-                    inquiry.getName(),
-                    inquiry.getPhone(),
-                    inquiry.getClassStandard(),
-                    inquiry.getBoard() != null ? inquiry.getBoard() : "Not specified",
-                    subjectsList.toString().trim(),
-                    inquiry.getAddress(),
-                    inquiry.getSelectedStartDate() != null ? inquiry.getSelectedStartDate().toString() : "Not specified",
-                    inquiry.getSelectedEndDate() != null ? inquiry.getSelectedEndDate().toString() : "Not specified",
-                    inquiry.getSelectedStartTime() != null ? inquiry.getSelectedStartTime().toString() : "Not specified",
-                    inquiry.getSelectedEndTime() != null ? inquiry.getSelectedEndTime().toString() : "Not specified",
-                    inquiry.getMessage() != null ? inquiry.getMessage() : "None",
-                    inquiry.getCreatedAt()
-            );
-
+            // Use approved template: enquiry_details_admin
             WhatsAppMessageRequest request = WhatsAppMessageRequest.builder()
                     .messagingProduct("whatsapp")
                     .to(adminPhone)
-                    .type("text")
-                    .text(WhatsAppMessageRequest.TextMessage.builder()
-                            .previewUrl(false)
-                            .body(message)
+                    .type("template")
+                    .template(WhatsAppMessageRequest.TemplateMessage.builder()
+                            .name("enquiry_details_admin")
+                            .language(WhatsAppMessageRequest.TemplateMessage.Language.builder()
+                                    .code("en")
+                                    .build())
+                            .components(Arrays.asList(
+                                    WhatsAppMessageRequest.TemplateMessage.Component.builder()
+                                            .type("body")
+                                            .parameters(Arrays.asList(
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getName())
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getPhone())
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getClassStandard())
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(subjects)
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getAddress())
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(String.valueOf(inquiry.getId()))
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(inquiry.getBoard() != null ? inquiry.getBoard() : "Not specified")
+                                                            .build()
+                                            ))
+                                            .build()
+                            ))
                             .build())
                     .build();
 
             sendMessage(request);
-            log.info("Sent full inquiry details to admin for inquiry #{}", inquiry.getId());
+            log.info("✅ Sent full inquiry details to admin using template for inquiry #{}", inquiry.getId());
         } catch (Exception e) {
             log.error("Failed to send inquiry to admin: {}", e.getMessage());
         }
@@ -199,25 +230,42 @@ public class WhatsAppService {
             String teacherPhone = formatPhoneNumber(phone);
             
             log.debug("Formatted phone: {}", teacherPhone);
-            log.debug("Using hello_world template (approved template)");
+            log.debug("Using teacher_registration_success template (approved)");
 
-            // Use approved template - hello_world for testing
-            // TODO: Create custom teacher_welcome template in Meta Business Suite
+            // Use approved template: teacher_registration_success
+            // Template params: {{1}} = teacherName, {{2}} = communityLink
+            String communityLink = whatsAppConfig.getCommunityInviteLink();
+            
             WhatsAppMessageRequest request = WhatsAppMessageRequest.builder()
                     .messagingProduct("whatsapp")
                     .to(teacherPhone)
                     .type("template")
                     .template(WhatsAppMessageRequest.TemplateMessage.builder()
-                            .name("hello_world")
+                            .name("teacher_registration_success")
                             .language(WhatsAppMessageRequest.TemplateMessage.Language.builder()
-                                    .code("en_US")
+                                    .code("en")
                                     .build())
+                            .components(Arrays.asList(
+                                    WhatsAppMessageRequest.TemplateMessage.Component.builder()
+                                            .type("body")
+                                            .parameters(Arrays.asList(
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(teacher.getFullName())
+                                                            .build(),
+                                                    WhatsAppMessageRequest.TemplateMessage.Component.Parameter.builder()
+                                                            .type("text")
+                                                            .text(communityLink)
+                                                            .build()
+                                            ))
+                                            .build()
+                            ))
                             .build())
                     .build();
 
             sendMessage(request);
             
-            log.info("Sent community invitation to teacher: {} ({})", teacher.getFullName(), teacherPhone);
+            log.info("✅ Sent teacher registration success using template to: {} ({})", teacher.getFullName(), teacherPhone);
         } catch (Exception e) {
             log.error("Failed to add teacher to community: {}", e.getMessage(), e);
         }
@@ -356,6 +404,25 @@ public class WhatsAppService {
             log.error("==================== WHATSAPP ERROR END ====================");
             throw new RuntimeException("Failed to send WhatsApp message", e);
         }
+    }
+
+    /**
+     * Convert minutes to readable time format
+     * Example: 540 -> "09:00 AM", 840 -> "02:00 PM", 1020 -> "05:00 PM"
+     */
+    private String formatTimeFromMinutes(Integer minutes) {
+        if (minutes == null) {
+            return "Not specified";
+        }
+        
+        int hours = minutes / 60;
+        int mins = minutes % 60;
+        
+        String period = hours >= 12 ? "PM" : "AM";
+        int displayHour = hours % 12;
+        if (displayHour == 0) displayHour = 12;
+        
+        return String.format("%02d:%02d %s", displayHour, mins, period);
     }
 
     /**

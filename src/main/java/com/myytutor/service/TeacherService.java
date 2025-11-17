@@ -129,11 +129,20 @@ public class TeacherService {
         if (teacher == null || !Boolean.TRUE.equals(teacher.getEmailVerified())) {
             throw new IllegalArgumentException("Email not verified. Please verify your email first.");
         }
+        
+        // 2. Check if teacher already completed full registration
+        if (teacherRepository.existsByEmailAndFullyRegistered(req.getEmail())) {
+            log.warn("Attempt to re-register already completed teacher account: {}", req.getEmail());
+            throw new IllegalStateException(
+                "This email is already registered with a complete teacher account. " +
+                "Please login instead of registering again."
+            );
+        }
 
-        // 2. Validate and update agreements
+        // 3. Validate and update agreements
         validateAndUpdateAgreements(teacher, req.getTeacherAgreement());
 
-        // 3. Update teacher details
+        // 4. Update teacher details
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
             teacher.setPassword(passwordEncoder.encode(req.getPassword()));
         }
@@ -152,29 +161,29 @@ public class TeacherService {
         teacher.setMode(req.getMode());
         teacher.setExpectedFeePerHour(req.getExpectedFeePerHour());
 
-        // 4. Save basic details first
+        // 5. Save basic details first
         teacher = teacherRepository.save(teacher);
 
-        // 5. Handle preferred areas mapping
+        // 6. Handle preferred areas mapping
         updatePreferredAreas(teacher, req.getPreferredAreas());
 
-        // 6. Handle subject mappings
+        // 7. Handle subject mappings
         updateSubjectMappings(teacher, req.getSubjectIds());
         updateExtraSubjectMappings(teacher, req.getAdditionalSubjects());
 
-        // 6. Handle availability mappings (Min: 1, Max: 3)
+        // 8. Handle availability mappings (Min: 1, Max: 3)
         updateTeacherAvailabilities(teacher, req.getAvailabilities());
 
-        // 7. Handle education mappings (Min: 1, Max: 3)
+        // 9. Handle education mappings (Min: 1, Max: 3)
         updateTeacherEducations(teacher, req.getEducations());
 
-        // 8. Save the teacher with all updates (including agreements, availabilities, and educations)
+        // 10. Save the teacher with all updates (including agreements, availabilities, and educations)
         teacher = teacherRepository.save(teacher);
 
-        // 9. Send registration success email with teacher details
+        // 11. Send registration success email with teacher details
         emailService.sendRegistrationSuccess(teacher.getEmail(), teacher.getFullName(), teacher);
 
-        // 10. Add teacher to WhatsApp community (async)
+        // 12. Add teacher to WhatsApp community (async)
         try {
             whatsAppService.addTeacherToCommunity(teacher);
         } catch (Exception e) {
