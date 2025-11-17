@@ -5,6 +5,7 @@ import com.myytutor.dto.InquiryRequest;
 import com.myytutor.entity.*;
 import com.myytutor.entity.Document.DocumentType;
 import com.myytutor.repository.*;
+import com.myytutor.util.HtmlSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ public class InquiryService {
 
     @Autowired
     private WhatsAppService whatsAppService;
+    
+    @Autowired
+    private HtmlSanitizer htmlSanitizer;
 
     private void validateSubjects(List<Long> subjectIds) {
         if (subjectIds == null || subjectIds.isEmpty()) {
@@ -63,7 +67,7 @@ public class InquiryService {
         log.debug("Successfully validated {} subjects", subjects.size());
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public Inquiry createInquiry(InquiryRequest req) {
         log.info("Creating new inquiry for {}", req.getName());
 
@@ -107,14 +111,26 @@ public class InquiryService {
         // Validate subjects
         validateSubjects(req.getSelectedSubjectIds());
 
+        // Sanitize user inputs to prevent XSS attacks
+        String sanitizedName = htmlSanitizer.sanitizeNotEmpty(req.getName());
+        String sanitizedAddress = htmlSanitizer.sanitizeNotEmpty(req.getAddress());
+        String sanitizedMessage = htmlSanitizer.sanitize(req.getMessage()); // Message can be empty
+        
+        if (sanitizedName == null) {
+            throw new IllegalArgumentException("Name cannot be empty after removing invalid characters");
+        }
+        if (sanitizedAddress == null) {
+            throw new IllegalArgumentException("Address cannot be empty after removing invalid characters");
+        }
+
         // Create and save the main inquiry
         final Inquiry inquiry = new Inquiry();
-        inquiry.setName(req.getName());
+        inquiry.setName(sanitizedName);
         inquiry.setPhone(req.getPhone());
         inquiry.setClassStandard(req.getClassStandard());
         inquiry.setBoard(req.getBoard());
-        inquiry.setAddress(req.getAddress());
-        inquiry.setMessage(req.getMessage());
+        inquiry.setAddress(sanitizedAddress);
+        inquiry.setMessage(sanitizedMessage);
         inquiry.setSelectedStartDate(req.getSelectedStartDate());
         inquiry.setSelectedEndDate(req.getSelectedEndDate());
         inquiry.setSelectedStartTime(req.getSelectedStartTime());

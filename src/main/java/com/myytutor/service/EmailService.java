@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -25,6 +26,7 @@ public class EmailService {
     @Value("${mail.from}")
     private String fromEmail;
 
+    @Async
     public void sendOtp(String to, String otp) {
         try {
             // Create context for template
@@ -48,11 +50,14 @@ public class EmailService {
             mailSender.send(message);
             log.info("OTP email sent successfully to: {}", to);
         } catch (Exception e) {
-            log.error("Failed to send OTP email to: {}", to, e);
-            throw new RuntimeException("Failed to send OTP email", e);
+            // CRITICAL: In @Async methods, exceptions are swallowed!
+            // Log error but DON'T throw - this allows rate limiting to work correctly
+            // User will know if email fails because they won't receive OTP
+            log.error("CRITICAL: Failed to send OTP email to: {} - User won't receive OTP!", to, e);
         }
     }
 
+    @Async
     public void sendRegistrationSuccess(String to, String name, com.myytutor.entity.Teacher teacher) {
         try {
             Context context = new Context();
@@ -79,11 +84,12 @@ public class EmailService {
             mailSender.send(message);
             log.info("Registration success email sent to: {}", to);
         } catch (Exception e) {
-            log.error("Failed to send registration success email to: {}", to, e);
-            throw new RuntimeException("Failed to send registration success email", e);
+            // CRITICAL: In @Async methods, exceptions are swallowed - log only
+            log.error("CRITICAL: Failed to send registration success email to: {}", to, e);
         }
     }
 
+    @Async
     public void sendVerificationSuccess(String to, String name) {
         try {
             Context context = new Context();
@@ -104,11 +110,12 @@ public class EmailService {
             mailSender.send(message);
             log.info("Verification success email sent to: {}", to);
         } catch (Exception e) {
-            log.error("Failed to send verification success email to: {}", to, e);
-            throw new RuntimeException("Failed to send verification success email", e);
+            // CRITICAL: In @Async methods, exceptions are swallowed - log only
+            log.error("CRITICAL: Failed to send verification success email to: {}", to, e);
         }
     }
 
+    @Async
     public void sendWelcomeEmail(String to, String name) {
         try {
             Context context = new Context();
@@ -129,8 +136,8 @@ public class EmailService {
             mailSender.send(message);
             log.info("Welcome email sent to: {}", to);
         } catch (Exception e) {
-            log.error("Failed to send welcome email to: {}", to, e);
-            throw new RuntimeException("Failed to send welcome email", e);
+            // CRITICAL: In @Async methods, exceptions are swallowed - log only
+            log.error("CRITICAL: Failed to send welcome email to: {}", to, e);
         }
     }
 }

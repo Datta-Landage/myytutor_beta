@@ -6,12 +6,14 @@ import com.myytutor.dto.TeacherRegistrationRequest;
 import com.myytutor.dto.ApiResponse;
 import com.myytutor.entity.Teacher;
 import com.myytutor.service.TeacherService;
+import com.myytutor.util.IpAddressExtractor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,6 +35,9 @@ public class TeacherController {
 	private static final Logger log = LoggerFactory.getLogger(TeacherController.class);
 	@Autowired
     private TeacherService teacherService;
+    
+    @Autowired
+    private IpAddressExtractor ipExtractor;
 
     @Operation(summary = "Send OTP for email verification",
             description = "Sends a verification OTP to the provided email address")
@@ -50,9 +55,11 @@ public class TeacherController {
     })
     @PostMapping(value = "/send-otp", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse> sendVerificationEmail(
-            @Valid @RequestBody TeacherEmailVerificationRequest request) {
-        log.info("Sending OTP for email verification: {}", request.getEmail());
-        teacherService.sendVerificationOtp(request);
+            @Valid @RequestBody TeacherEmailVerificationRequest request,
+            HttpServletRequest httpRequest) {
+        String ipAddress = ipExtractor.getClientIpAddress(httpRequest);
+        log.info("Sending OTP for email verification: {} from IP: {}", request.getEmail(), ipAddress);
+        teacherService.sendVerificationOtp(request, ipAddress);
         return ResponseEntity.ok(new ApiResponse("success", "Verification OTP sent to your email"));
     }
 

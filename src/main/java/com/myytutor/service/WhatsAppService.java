@@ -360,9 +360,7 @@ public class WhatsAppService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(whatsAppConfig.getAccessToken());
-            log.debug("Headers prepared - Content-Type: {}, Authorization: Bearer {}...", 
-                MediaType.APPLICATION_JSON, 
-                whatsAppConfig.getAccessToken() != null ? whatsAppConfig.getAccessToken().substring(0, Math.min(20, whatsAppConfig.getAccessToken().length())) : "NULL");
+            log.debug("Headers prepared with Bearer authentication");
 
             // Create request entity
             log.debug("Creating HTTP entity...");

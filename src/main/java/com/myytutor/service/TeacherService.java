@@ -2,9 +2,11 @@ package com.myytutor.service;
 
 import com.myytutor.dto.*;
 import com.myytutor.entity.*;
+import com.myytutor.entity.EmailRateLimit.EmailType;
 import com.myytutor.repository.*;
 import com.myytutor.exception.ResourceNotFoundException;
 import com.myytutor.util.TeacherEducationConverter;
+import com.myytutor.util.HtmlSanitizer;
 import java.util.stream.Collectors;
 import com.myytutor.repository.DocumentRepository;
 import org.slf4j.Logger;
@@ -59,10 +61,19 @@ public class TeacherService {
     
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private HtmlSanitizer htmlSanitizer;
+    
+    @Autowired
+    private EmailRateLimitService emailRateLimitService;
 
     private final SecureRandom random = new SecureRandom();
 
-    public void sendVerificationOtp(TeacherEmailVerificationRequest req) {
+    public void sendVerificationOtp(TeacherEmailVerificationRequest req, String ipAddress) {
+        // Check rate limiting FIRST to prevent abuse
+        emailRateLimitService.checkAndRecordEmailAttempt(req.getEmail(), ipAddress, EmailType.OTP);
+        
         // Check if email already registered and verified
         Teacher existing = teacherRepository.findByEmail(req.getEmail());
         if (existing != null && Boolean.TRUE.equals(existing.getEmailVerified())) {
@@ -84,6 +95,7 @@ public class TeacherService {
         log.info("Sent verification OTP to: {}", req.getEmail());
     }
 
+    @Transactional(timeout = 30)
     public void verifyOtp(TeacherOtpVerificationRequest req) {
         Teacher teacher = teacherRepository.findByEmail(req.getEmail());
         if (teacher == null) {
@@ -93,6 +105,14 @@ public class TeacherService {
         // Check if email is already verified
         if (Boolean.TRUE.equals(teacher.getEmailVerified())) {
             throw new IllegalArgumentException("Email is already verified. Please proceed with registration.");
+        }
+        
+        // CRITICAL: Check if account is locked due to too many failed attempts
+        if (teacher.getOtpLockedUntil() != null && teacher.getOtpLockedUntil().isAfter(LocalDateTime.now())) {
+            long minutesRemaining = java.time.Duration.between(LocalDateTime.now(), teacher.getOtpLockedUntil()).toMinutes();
+            throw new IllegalStateException(
+                String.format("Too many failed OTP attempts. Account locked for %d more minutes. Please try again later.", minutesRemaining)
+            );
         }
 
         // Check if OTP exists
@@ -107,11 +127,27 @@ public class TeacherService {
 
         // Verify OTP
         if (!teacher.getEmailOtp().equals(req.getOtp())) {
-            throw new IllegalArgumentException("Invalid OTP");
+            // CRITICAL: Increment failed attempts
+            int attempts = (teacher.getOtpAttempts() != null ? teacher.getOtpAttempts() : 0) + 1;
+            teacher.setOtpAttempts(attempts);
+            
+            // Lock account after 5 failed attempts for 30 minutes
+            if (attempts >= 5) {
+                teacher.setOtpLockedUntil(LocalDateTime.now().plusMinutes(30));
+                teacherRepository.save(teacher);
+                log.warn("Account locked for email {} after {} failed OTP attempts", req.getEmail(), attempts);
+                throw new IllegalStateException("Too many failed attempts. Account locked for 30 minutes. Please try again later.");
+            }
+            
+            teacherRepository.save(teacher);
+            log.warn("Failed OTP verification attempt {} of 5 for email: {}", attempts, req.getEmail());
+            throw new IllegalArgumentException(String.format("Invalid OTP. %d attempts remaining.", 5 - attempts));
         }
 
-        // Mark email as verified
+        // Mark email as verified and RESET failed attempts
         teacher.setEmailVerified(true);
+        teacher.setOtpAttempts(0);
+        teacher.setOtpLockedUntil(null);
         teacher.setEmailVerifiedAt(LocalDateTime.now());
         teacher.setEmailOtp(null); // Clear OTP after verification
         teacher.setEmailOtpGeneratedAt(null);
@@ -122,7 +158,7 @@ public class TeacherService {
         log.info("Email verified for: {}", req.getEmail());
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public Teacher registerTeacher(TeacherRegistrationRequest req) {
         // 1. Verify email is validated
         Teacher teacher = teacherRepository.findByEmail(req.getEmail());
@@ -142,42 +178,58 @@ public class TeacherService {
         // 3. Validate and update agreements
         validateAndUpdateAgreements(teacher, req.getTeacherAgreement());
 
-        // 4. Update teacher details
+        // 4. Sanitize user inputs to prevent XSS attacks
+        String sanitizedFullName = htmlSanitizer.sanitizeNotEmpty(req.getFullName());
+        String sanitizedQualifications = htmlSanitizer.sanitize(req.getQualifications());
+        String sanitizedCertifications = htmlSanitizer.sanitize(req.getCertifications());
+        String sanitizedAddress = htmlSanitizer.sanitizeNotEmpty(req.getAddress());
+        String sanitizedAboutMe = htmlSanitizer.sanitize(req.getAboutMe());
+        
+        if (sanitizedFullName == null) {
+            throw new IllegalArgumentException("Full name cannot be empty after removing invalid characters");
+        }
+        if (sanitizedAddress == null) {
+            throw new IllegalArgumentException("Address cannot be empty after removing invalid characters");
+        }
+
+        // 5. Update teacher details
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            // CRITICAL: Validate password complexity
+            validatePasswordComplexity(req.getPassword());
             teacher.setPassword(passwordEncoder.encode(req.getPassword()));
         }
-        teacher.setFullName(req.getFullName());
+        teacher.setFullName(sanitizedFullName);
         teacher.setPhoneNumber(req.getPhoneNumber());
         teacher.setWhatsappNumber(req.getWhatsappNumber());
         teacher.setGender(validateGender(req.getGender()));
-        teacher.setQualifications(req.getQualifications());
-        teacher.setCertifications(req.getCertifications());
+        teacher.setQualifications(sanitizedQualifications);
+        teacher.setCertifications(sanitizedCertifications);
         teacher.setExperience(req.getExperience());
         teacher.setHasVehicle(req.getHasVehicle());
         teacher.setCity(req.getCity());
         teacher.setPin(req.getPin());
-        teacher.setAddress(req.getAddress());
-        teacher.setAboutMe(req.getAboutMe());
+        teacher.setAddress(sanitizedAddress);
+        teacher.setAboutMe(sanitizedAboutMe);
         teacher.setMode(req.getMode());
         teacher.setExpectedFeePerHour(req.getExpectedFeePerHour());
 
-        // 5. Save basic details first
+        // 6. Save basic details first
         teacher = teacherRepository.save(teacher);
 
-        // 6. Handle preferred areas mapping
+        // 7. Handle preferred areas mapping
         updatePreferredAreas(teacher, req.getPreferredAreas());
 
-        // 7. Handle subject mappings
+        // 8. Handle subject mappings
         updateSubjectMappings(teacher, req.getSubjectIds());
         updateExtraSubjectMappings(teacher, req.getAdditionalSubjects());
 
-        // 8. Handle availability mappings (Min: 1, Max: 3)
+        // 9. Handle availability mappings (Min: 1, Max: 3)
         updateTeacherAvailabilities(teacher, req.getAvailabilities());
 
-        // 9. Handle education mappings (Min: 1, Max: 3)
+        // 10. Handle education mappings (Min: 1, Max: 3)
         updateTeacherEducations(teacher, req.getEducations());
 
-        // 10. Save the teacher with all updates (including agreements, availabilities, and educations)
+        // 11. Save the teacher with all updates (including agreements, availabilities, and educations)
         teacher = teacherRepository.save(teacher);
 
         // 11. Send registration success email with teacher details
@@ -340,6 +392,59 @@ public class TeacherService {
         }
         return g;
     }
+    
+    /**
+     * CRITICAL SECURITY: Validate password complexity
+     * Requirements:
+     * - Minimum 8 characters
+     * - At least 1 uppercase letter
+     * - At least 1 lowercase letter
+     * - At least 1 digit
+     * - At least 1 special character (@$!%*?&#)
+     */
+    private void validatePasswordComplexity(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+        
+        boolean hasUpper = false;
+        boolean hasLower = false;
+        boolean hasDigit = false;
+        boolean hasSpecial = false;
+        
+        String specialChars = "@$!%*?&#";
+        
+        for (char c : password.toCharArray()) {
+            if (Character.isUpperCase(c)) hasUpper = true;
+            else if (Character.isLowerCase(c)) hasLower = true;
+            else if (Character.isDigit(c)) hasDigit = true;
+            else if (specialChars.indexOf(c) >= 0) hasSpecial = true;
+        }
+        
+        if (!hasUpper) {
+            throw new IllegalArgumentException("Password must contain at least one uppercase letter");
+        }
+        if (!hasLower) {
+            throw new IllegalArgumentException("Password must contain at least one lowercase letter");
+        }
+        if (!hasDigit) {
+            throw new IllegalArgumentException("Password must contain at least one digit");
+        }
+        if (!hasSpecial) {
+            throw new IllegalArgumentException("Password must contain at least one special character (@$!%*?&#)");
+        }
+        
+        // Check for common weak passwords
+        String lowerPassword = password.toLowerCase();
+        String[] weakPasswords = {"password", "12345678", "qwerty", "admin123", "welcome1"};
+        for (String weak : weakPasswords) {
+            if (lowerPassword.contains(weak)) {
+                throw new IllegalArgumentException("Password is too common. Please choose a stronger password");
+            }
+        }
+        
+        log.debug("Password complexity validation passed");
+    }
 
     private void updateSubjectMappings(Teacher teacher, Set<Long> subjectIds) {
         log.info("Updating subject mappings for teacher: {}", teacher.getId());
@@ -419,7 +524,7 @@ public class TeacherService {
         log.info("Added {} preferred area mappings for teacher: {}", addedCount, teacher.getId());
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public List<TeacherEducationDTO> updateTeacherEducation(Long teacherId, List<TeacherEducationDTO> educationDTOs) {
         log.info("Updating education details for teacher: {}", teacherId);
         
@@ -458,7 +563,7 @@ public class TeacherService {
         return TeacherEducationConverter.toDtoList(educationEntities);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, timeout = 30)
     public List<TeacherEducationDTO> getTeacherEducation(Long teacherId) {
         log.info("Fetching education details for teacher: {}", teacherId);
         
@@ -474,7 +579,7 @@ public class TeacherService {
         return TeacherEducationConverter.toDtoList(educationRecords);
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public TeacherEducationDTO addTeacherEducation(Long teacherId, TeacherEducationDTO educationDTO) {
         log.info("Adding new education record for teacher: {}", teacherId);
         
@@ -497,7 +602,7 @@ public class TeacherService {
         return TeacherEducationConverter.toDto(education);
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public void deleteTeacherEducation(Long teacherId, Long educationId) {
         log.info("Deleting education record {} for teacher: {}", educationId, teacherId);
         
