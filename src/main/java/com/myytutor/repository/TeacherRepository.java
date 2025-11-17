@@ -12,6 +12,15 @@ import java.time.LocalDateTime;
 public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 	// Teacher entity doesn't have a 'username' field. Use email for lookup instead.
 	Teacher findByEmail(String email);
+	
+	/**
+	 * Check if a teacher with verified email and completed registration exists
+	 * @param email The email to check
+	 * @return true if teacher is fully registered, false otherwise
+	 */
+	@Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM Teacher t " +
+		   "WHERE t.email = :email AND t.emailVerified = true AND t.fullName IS NOT NULL")
+	boolean existsByEmailAndFullyRegistered(@Param("email") String email);
 
 	/**
 	 * Delete unverified teacher accounts where OTP has expired

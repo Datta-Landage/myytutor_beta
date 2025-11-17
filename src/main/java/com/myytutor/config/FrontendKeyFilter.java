@@ -33,6 +33,10 @@ public class FrontendKeyFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
+        String origin = request.getHeader("Origin");
+
+        // Log request details for debugging
+        logger.debug("Request: {} {} from origin: {}", request.getMethod(), path, origin);
 
         // Skip validation for excluded paths and OPTIONS requests
         if (shouldSkipFilter(request)) {

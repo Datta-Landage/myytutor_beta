@@ -18,12 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/teachers")
@@ -53,18 +51,9 @@ public class TeacherController {
     @PostMapping(value = "/send-otp", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse> sendVerificationEmail(
             @Valid @RequestBody TeacherEmailVerificationRequest request) {
-        try {
-            log.info("Sending OTP for email verification: {}", request.getEmail());
-            teacherService.sendVerificationOtp(request);
-            return ResponseEntity.ok(new ApiResponse("success", "Verification OTP sent to your email"));
-        } catch (IllegalStateException e) {
-            log.warn("Failed to send OTP: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                .body(new ApiResponse("error", e.getMessage()));
-        } catch (Exception e) {
-            log.error("Unexpected error while sending OTP", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send OTP");
-        }
+        log.info("Sending OTP for email verification: {}", request.getEmail());
+        teacherService.sendVerificationOtp(request);
+        return ResponseEntity.ok(new ApiResponse("success", "Verification OTP sent to your email"));
     }
 
     @Operation(summary = "Verify OTP",
@@ -84,18 +73,9 @@ public class TeacherController {
     @PostMapping(value = "/verify-otp", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse> verifyOtp(
             @Valid @RequestBody TeacherOtpVerificationRequest request) {
-        try {
-            log.info("Verifying OTP for email: {}", request.getEmail());
-            teacherService.verifyOtp(request);
-            return ResponseEntity.ok(new ApiResponse("success", "Email verified successfully"));
-        } catch (IllegalArgumentException e) {
-            log.warn("OTP verification failed: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                .body(new ApiResponse("error", e.getMessage()));
-        } catch (Exception e) {
-            log.error("Unexpected error during OTP verification", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to verify OTP");
-        }
+        log.info("Verifying OTP for email: {}", request.getEmail());
+        teacherService.verifyOtp(request);
+        return ResponseEntity.ok(new ApiResponse("success", "Email verified successfully"));
     }
 
     @Operation(summary = "Complete teacher registration",
@@ -116,20 +96,10 @@ public class TeacherController {
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse> register(
             @Valid @RequestBody TeacherRegistrationRequest request) {
-        try {
-            log.info("Processing teacher registration for email: {}", request.getEmail());
-            Teacher registeredTeacher = teacherService.registerTeacher(request);
-            return ResponseEntity.ok(new ApiResponse("success", 
-                String.format("Teacher %s registered successfully!", registeredTeacher.getEmail())));
-        } catch (IllegalStateException e) {
-            log.warn("Registration failed: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                .body(new ApiResponse("error", e.getMessage()));
-        } catch (Exception e) {
-            log.error("Unexpected error during teacher registration", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
-                "Failed to complete registration");
-        }
+        log.info("Processing teacher registration for email: {}", request.getEmail());
+        Teacher registeredTeacher = teacherService.registerTeacher(request);
+        return ResponseEntity.ok(new ApiResponse("success", 
+            String.format("Teacher %s registered successfully!", registeredTeacher.getEmail())));
     }
 
 
