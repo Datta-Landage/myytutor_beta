@@ -65,8 +65,7 @@ public class EmailService {
             context.setVariable("name", name);
             context.setVariable("email", to);
             context.setVariable("registrationDate", java.time.LocalDateTime.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy 'at' hh:mm a")
-            ));
+                    java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy 'at' hh:mm a")));
             context.setVariable("teacher", teacher);
 
             // Process registration success template with layout

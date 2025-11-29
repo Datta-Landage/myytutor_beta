@@ -10,16 +10,17 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class HtmlSanitizer {
-    
+
     /**
      * Policy that strips all HTML tags, allowing only plain text.
      * This is the most secure option for user-generated content.
      */
     private static final PolicyFactory POLICY = new HtmlPolicyBuilder()
             .toFactory();
-    
+
     /**
-     * Sanitizes a string by removing all HTML tags and potentially dangerous content.
+     * Sanitizes a string by removing all HTML tags and potentially dangerous
+     * content.
      * Returns null if input is null.
      * 
      * @param input The string to sanitize
@@ -31,7 +32,7 @@ public class HtmlSanitizer {
         }
         return POLICY.sanitize(input).trim();
     }
-    
+
     /**
      * Sanitizes a string and ensures it's not empty after sanitization.
      * 

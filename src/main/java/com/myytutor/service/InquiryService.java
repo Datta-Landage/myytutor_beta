@@ -39,7 +39,7 @@ public class InquiryService {
 
     @Autowired
     private WhatsAppService whatsAppService;
-    
+
     @Autowired
     private HtmlSanitizer htmlSanitizer;
 
@@ -80,14 +80,13 @@ public class InquiryService {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
         long inquiryCount = inquiryRepository.countByPhoneAndCreatedAtBetween(req.getPhone(), startOfDay, endOfDay);
-        
+
         if (inquiryCount >= 5) {
             log.warn("Phone {} exceeded daily inquiry limit: {} inquiries today", req.getPhone(), inquiryCount);
             throw new IllegalArgumentException(
-                "You have reached the maximum limit of 5 inquiries per day. Please try again tomorrow."
-            );
+                    "You have reached the maximum limit of 5 inquiries per day. Please try again tomorrow.");
         }
-        
+
         log.debug("Phone {} has {} inquiries today (limit: 5)", req.getPhone(), inquiryCount);
 
         // Validate privacy policy acceptance
@@ -115,7 +114,7 @@ public class InquiryService {
         String sanitizedName = htmlSanitizer.sanitizeNotEmpty(req.getName());
         String sanitizedAddress = htmlSanitizer.sanitizeNotEmpty(req.getAddress());
         String sanitizedMessage = htmlSanitizer.sanitize(req.getMessage()); // Message can be empty
-        
+
         if (sanitizedName == null) {
             throw new IllegalArgumentException("Name cannot be empty after removing invalid characters");
         }
@@ -173,16 +172,16 @@ public class InquiryService {
         try {
             // 1. Send confirmation to customer
             whatsAppService.sendInquiryConfirmation(inquiry.getPhone(), inquiry.getName(), inquiry.getId().toString());
-            
+
             // Small delay to avoid rate limiting in test mode
             Thread.sleep(1000);
-            
+
             // 2. Broadcast to teacher community (short summary to admin)
             whatsAppService.broadcastInquiryToCommunity(inquiry);
-            
+
             // Small delay between messages to same number (test mode limitation)
             Thread.sleep(2000);
-            
+
             // 3. Send full details to admin
             whatsAppService.sendFullInquiryToAdmin(inquiry);
         } catch (Exception e) {

@@ -40,11 +40,11 @@ public class Teacher {
 
     @Column
     private LocalDateTime emailVerifiedAt;
-    
+
     // OTP brute force protection
     @Column
     private Integer otpAttempts = 0;
-    
+
     @Column
     private LocalDateTime otpLockedUntil;
 
@@ -210,19 +210,19 @@ public class Teacher {
     public void setEmailVerifiedAt(LocalDateTime emailVerifiedAt) {
         this.emailVerifiedAt = emailVerifiedAt;
     }
-    
+
     public Integer getOtpAttempts() {
         return otpAttempts;
     }
-    
+
     public void setOtpAttempts(Integer otpAttempts) {
         this.otpAttempts = otpAttempts;
     }
-    
+
     public LocalDateTime getOtpLockedUntil() {
         return otpLockedUntil;
     }
-    
+
     public void setOtpLockedUntil(LocalDateTime otpLockedUntil) {
         this.otpLockedUntil = otpLockedUntil;
     }
