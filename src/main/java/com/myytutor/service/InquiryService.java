@@ -5,6 +5,7 @@ import com.myytutor.dto.InquiryRequest;
 import com.myytutor.entity.*;
 import com.myytutor.entity.Document.DocumentType;
 import com.myytutor.repository.*;
+import com.myytutor.util.HtmlSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,9 @@ public class InquiryService {
     @Autowired
     private WhatsAppService whatsAppService;
 
+    @Autowired
+    private HtmlSanitizer htmlSanitizer;
+
     private void validateSubjects(List<Long> subjectIds) {
         if (subjectIds == null || subjectIds.isEmpty()) {
             log.error("No subjects selected in the inquiry request");
@@ -63,7 +67,7 @@ public class InquiryService {
         log.debug("Successfully validated {} subjects", subjects.size());
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public Inquiry createInquiry(InquiryRequest req) {
         log.info("Creating new inquiry for {}", req.getName());
 
@@ -76,14 +80,13 @@ public class InquiryService {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
         long inquiryCount = inquiryRepository.countByPhoneAndCreatedAtBetween(req.getPhone(), startOfDay, endOfDay);
-        
+
         if (inquiryCount >= 5) {
             log.warn("Phone {} exceeded daily inquiry limit: {} inquiries today", req.getPhone(), inquiryCount);
             throw new IllegalArgumentException(
-                "You have reached the maximum limit of 5 inquiries per day. Please try again tomorrow."
-            );
+                    "You have reached the maximum limit of 5 inquiries per day. Please try again tomorrow.");
         }
-        
+
         log.debug("Phone {} has {} inquiries today (limit: 5)", req.getPhone(), inquiryCount);
 
         // Validate privacy policy acceptance
@@ -107,14 +110,26 @@ public class InquiryService {
         // Validate subjects
         validateSubjects(req.getSelectedSubjectIds());
 
+        // Sanitize user inputs to prevent XSS attacks
+        String sanitizedName = htmlSanitizer.sanitizeNotEmpty(req.getName());
+        String sanitizedAddress = htmlSanitizer.sanitizeNotEmpty(req.getAddress());
+        String sanitizedMessage = htmlSanitizer.sanitize(req.getMessage()); // Message can be empty
+
+        if (sanitizedName == null) {
+            throw new IllegalArgumentException("Name cannot be empty after removing invalid characters");
+        }
+        if (sanitizedAddress == null) {
+            throw new IllegalArgumentException("Address cannot be empty after removing invalid characters");
+        }
+
         // Create and save the main inquiry
         final Inquiry inquiry = new Inquiry();
-        inquiry.setName(req.getName());
+        inquiry.setName(sanitizedName);
         inquiry.setPhone(req.getPhone());
         inquiry.setClassStandard(req.getClassStandard());
         inquiry.setBoard(req.getBoard());
-        inquiry.setAddress(req.getAddress());
-        inquiry.setMessage(req.getMessage());
+        inquiry.setAddress(sanitizedAddress);
+        inquiry.setMessage(sanitizedMessage);
         inquiry.setSelectedStartDate(req.getSelectedStartDate());
         inquiry.setSelectedEndDate(req.getSelectedEndDate());
         inquiry.setSelectedStartTime(req.getSelectedStartTime());
@@ -157,16 +172,16 @@ public class InquiryService {
         try {
             // 1. Send confirmation to customer
             whatsAppService.sendInquiryConfirmation(inquiry.getPhone(), inquiry.getName(), inquiry.getId().toString());
-            
+
             // Small delay to avoid rate limiting in test mode
             Thread.sleep(1000);
-            
+
             // 2. Broadcast to teacher community (short summary to admin)
             whatsAppService.broadcastInquiryToCommunity(inquiry);
-            
+
             // Small delay between messages to same number (test mode limitation)
             Thread.sleep(2000);
-            
+
             // 3. Send full details to admin
             whatsAppService.sendFullInquiryToAdmin(inquiry);
         } catch (Exception e) {

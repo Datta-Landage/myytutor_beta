@@ -2,9 +2,11 @@ package com.myytutor.service;
 
 import com.myytutor.dto.*;
 import com.myytutor.entity.*;
+import com.myytutor.entity.EmailRateLimit.EmailType;
 import com.myytutor.repository.*;
 import com.myytutor.exception.ResourceNotFoundException;
 import com.myytutor.util.TeacherEducationConverter;
+import com.myytutor.util.HtmlSanitizer;
 import java.util.stream.Collectors;
 import com.myytutor.repository.DocumentRepository;
 import org.slf4j.Logger;
@@ -23,46 +25,55 @@ public class TeacherService {
 
     @Autowired
     private TeacherRepository teacherRepository;
-    
+
     @Autowired
     private TeacherAvailabilityRepository teacherAvailabilityRepository;
-    
+
     @Autowired
     private TeacherEducationRepository teacherEducationRepository;
-    
+
     @Autowired
     private TeacherSubjectMappingRepository subjectMappingRepository;
-    
+
     @Autowired
     private TeacherExtraSubjectMappingRepository extraSubjectMappingRepository;
-    
+
     @Autowired
     private TeacherPreferredAreaMappingRepository preferredAreaMappingRepository;
-    
+
     @Autowired
     private EmailService emailService;
-    
+
     @Autowired
     private WhatsAppService whatsAppService;
-    
+
     @Autowired
     private DocumentService documentService;
-    
+
     @Autowired
     private DocumentRepository repo;
 
     @Autowired
     private SubjectClassRepository subjectClassRepository;
-    
+
     @Autowired
     private ExtraSubjectRepository extraSubjectRepository;
-    
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private HtmlSanitizer htmlSanitizer;
+
+    @Autowired
+    private EmailRateLimitService emailRateLimitService;
+
     private final SecureRandom random = new SecureRandom();
 
-    public void sendVerificationOtp(TeacherEmailVerificationRequest req) {
+    public void sendVerificationOtp(TeacherEmailVerificationRequest req, String ipAddress) {
+        // Check rate limiting FIRST to prevent abuse
+        emailRateLimitService.checkAndRecordEmailAttempt(req.getEmail(), ipAddress, EmailType.OTP);
+
         // Check if email already registered and verified
         Teacher existing = teacherRepository.findByEmail(req.getEmail());
         if (existing != null && Boolean.TRUE.equals(existing.getEmailVerified())) {
@@ -84,6 +95,7 @@ public class TeacherService {
         log.info("Sent verification OTP to: {}", req.getEmail());
     }
 
+    @Transactional(timeout = 30)
     public void verifyOtp(TeacherOtpVerificationRequest req) {
         Teacher teacher = teacherRepository.findByEmail(req.getEmail());
         if (teacher == null) {
@@ -93,6 +105,16 @@ public class TeacherService {
         // Check if email is already verified
         if (Boolean.TRUE.equals(teacher.getEmailVerified())) {
             throw new IllegalArgumentException("Email is already verified. Please proceed with registration.");
+        }
+
+        // CRITICAL: Check if account is locked due to too many failed attempts
+        if (teacher.getOtpLockedUntil() != null && teacher.getOtpLockedUntil().isAfter(LocalDateTime.now())) {
+            long minutesRemaining = java.time.Duration.between(LocalDateTime.now(), teacher.getOtpLockedUntil())
+                    .toMinutes();
+            throw new IllegalStateException(
+                    String.format(
+                            "Too many failed OTP attempts. Account locked for %d more minutes. Please try again later.",
+                            minutesRemaining));
         }
 
         // Check if OTP exists
@@ -107,77 +129,111 @@ public class TeacherService {
 
         // Verify OTP
         if (!teacher.getEmailOtp().equals(req.getOtp())) {
-            throw new IllegalArgumentException("Invalid OTP");
+            // CRITICAL: Increment failed attempts
+            int attempts = (teacher.getOtpAttempts() != null ? teacher.getOtpAttempts() : 0) + 1;
+            teacher.setOtpAttempts(attempts);
+
+            // Lock account after 5 failed attempts for 30 minutes
+            if (attempts >= 5) {
+                teacher.setOtpLockedUntil(LocalDateTime.now().plusMinutes(30));
+                teacherRepository.save(teacher);
+                log.warn("Account locked for email {} after {} failed OTP attempts", req.getEmail(), attempts);
+                throw new IllegalStateException(
+                        "Too many failed attempts. Account locked for 30 minutes. Please try again later.");
+            }
+
+            teacherRepository.save(teacher);
+            log.warn("Failed OTP verification attempt {} of 5 for email: {}", attempts, req.getEmail());
+            throw new IllegalArgumentException(String.format("Invalid OTP. %d attempts remaining.", 5 - attempts));
         }
 
-        // Mark email as verified
+        // Mark email as verified and RESET failed attempts
         teacher.setEmailVerified(true);
+        teacher.setOtpAttempts(0);
+        teacher.setOtpLockedUntil(null);
         teacher.setEmailVerifiedAt(LocalDateTime.now());
         teacher.setEmailOtp(null); // Clear OTP after verification
         teacher.setEmailOtpGeneratedAt(null);
         teacherRepository.save(teacher);
-        
+
         // Send verification success email
-        emailService.sendVerificationSuccess(req.getEmail(), teacher.getFullName() != null ? teacher.getFullName() : "User");
+        emailService.sendVerificationSuccess(req.getEmail(),
+                teacher.getFullName() != null ? teacher.getFullName() : "User");
         log.info("Email verified for: {}", req.getEmail());
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public Teacher registerTeacher(TeacherRegistrationRequest req) {
         // 1. Verify email is validated
         Teacher teacher = teacherRepository.findByEmail(req.getEmail());
         if (teacher == null || !Boolean.TRUE.equals(teacher.getEmailVerified())) {
             throw new IllegalArgumentException("Email not verified. Please verify your email first.");
         }
-        
+
         // 2. Check if teacher already completed full registration
         if (teacherRepository.existsByEmailAndFullyRegistered(req.getEmail())) {
             log.warn("Attempt to re-register already completed teacher account: {}", req.getEmail());
             throw new IllegalStateException(
-                "This email is already registered with a complete teacher account. " +
-                "Please login instead of registering again."
-            );
+                    "This email is already registered with a complete teacher account. " +
+                            "Please login instead of registering again.");
         }
 
         // 3. Validate and update agreements
         validateAndUpdateAgreements(teacher, req.getTeacherAgreement());
 
-        // 4. Update teacher details
+        // 4. Sanitize user inputs to prevent XSS attacks
+        String sanitizedFullName = htmlSanitizer.sanitizeNotEmpty(req.getFullName());
+        String sanitizedQualifications = htmlSanitizer.sanitize(req.getQualifications());
+        String sanitizedCertifications = htmlSanitizer.sanitize(req.getCertifications());
+        String sanitizedAddress = htmlSanitizer.sanitizeNotEmpty(req.getAddress());
+        String sanitizedAboutMe = htmlSanitizer.sanitize(req.getAboutMe());
+
+        if (sanitizedFullName == null) {
+            throw new IllegalArgumentException("Full name cannot be empty after removing invalid characters");
+        }
+        if (sanitizedAddress == null) {
+            throw new IllegalArgumentException("Address cannot be empty after removing invalid characters");
+        }
+
+        // 5. Update teacher details
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            // CRITICAL: Validate password complexity
+            validatePasswordComplexity(req.getPassword());
             teacher.setPassword(passwordEncoder.encode(req.getPassword()));
         }
-        teacher.setFullName(req.getFullName());
+        teacher.setFullName(sanitizedFullName);
         teacher.setPhoneNumber(req.getPhoneNumber());
         teacher.setWhatsappNumber(req.getWhatsappNumber());
         teacher.setGender(validateGender(req.getGender()));
-        teacher.setQualifications(req.getQualifications());
-        teacher.setCertifications(req.getCertifications());
+        teacher.setQualifications(sanitizedQualifications);
+        teacher.setCertifications(sanitizedCertifications);
         teacher.setExperience(req.getExperience());
         teacher.setHasVehicle(req.getHasVehicle());
         teacher.setCity(req.getCity());
         teacher.setPin(req.getPin());
-        teacher.setAddress(req.getAddress());
-        teacher.setAboutMe(req.getAboutMe());
+        teacher.setAddress(sanitizedAddress);
+        teacher.setAboutMe(sanitizedAboutMe);
         teacher.setMode(req.getMode());
         teacher.setExpectedFeePerHour(req.getExpectedFeePerHour());
 
-        // 5. Save basic details first
+        // 6. Save basic details first
         teacher = teacherRepository.save(teacher);
 
-        // 6. Handle preferred areas mapping
+        // 7. Handle preferred areas mapping
         updatePreferredAreas(teacher, req.getPreferredAreas());
 
-        // 7. Handle subject mappings
+        // 8. Handle subject mappings
         updateSubjectMappings(teacher, req.getSubjectIds());
         updateExtraSubjectMappings(teacher, req.getAdditionalSubjects());
 
-        // 8. Handle availability mappings (Min: 1, Max: 3)
+        // 9. Handle availability mappings (Min: 1, Max: 3)
         updateTeacherAvailabilities(teacher, req.getAvailabilities());
 
-        // 9. Handle education mappings (Min: 1, Max: 3)
+        // 10. Handle education mappings (Min: 1, Max: 3)
         updateTeacherEducations(teacher, req.getEducations());
 
-        // 10. Save the teacher with all updates (including agreements, availabilities, and educations)
+        // 11. Save the teacher with all updates (including agreements, availabilities,
+        // and educations)
         teacher = teacherRepository.save(teacher);
 
         // 11. Send registration success email with teacher details
@@ -290,12 +346,15 @@ public class TeacherService {
         // 3. Verify and set Privacy Policy
         DocumentResponseDto latestPrivacyPolicy = documentService.getLatest(Document.DocumentType.PRIVACY_POLICY);
         if (!latestPrivacyPolicy.getVersion().equals(agreementDTO.getPrivacyPolicyVersion())) {
-            log.error("Invalid Privacy Policy version provided: {}, latest version: {}", 
+            log.error("Invalid Privacy Policy version provided: {}, latest version: {}",
                     agreementDTO.getPrivacyPolicyVersion(), latestPrivacyPolicy.getVersion());
-            throw new IllegalArgumentException("Must accept the latest Privacy Policy version: " + latestPrivacyPolicy.getVersion());
+            throw new IllegalArgumentException(
+                    "Must accept the latest Privacy Policy version: " + latestPrivacyPolicy.getVersion());
         }
-        DocumentResponseDto ppDocDto = documentService.getByVersion(Document.DocumentType.PRIVACY_POLICY, agreementDTO.getPrivacyPolicyVersion());
-        agreement.setPrivacyPolicy(repo.findByTypeAndVersion(Document.DocumentType.PRIVACY_POLICY, agreementDTO.getPrivacyPolicyVersion())
+        DocumentResponseDto ppDocDto = documentService.getByVersion(Document.DocumentType.PRIVACY_POLICY,
+                agreementDTO.getPrivacyPolicyVersion());
+        agreement.setPrivacyPolicy(repo
+                .findByTypeAndVersion(Document.DocumentType.PRIVACY_POLICY, agreementDTO.getPrivacyPolicyVersion())
                 .orElseThrow(() -> new IllegalStateException("Privacy Policy document not found after verification")));
         agreement.setPrivacyPolicyAcceptedAt(LocalDateTime.now());
         log.debug("Privacy Policy {} accepted at {}", ppDocDto.getVersion(), agreement.getPrivacyPolicyAcceptedAt());
@@ -303,12 +362,15 @@ public class TeacherService {
         // 4. Verify and set Terms of Use
         DocumentResponseDto latestTerms = documentService.getLatest(Document.DocumentType.TERMS_OF_USE);
         if (!latestTerms.getVersion().equals(agreementDTO.getTermsOfUseVersion())) {
-            log.error("Invalid Terms of Use version provided: {}, latest version: {}", 
+            log.error("Invalid Terms of Use version provided: {}, latest version: {}",
                     agreementDTO.getTermsOfUseVersion(), latestTerms.getVersion());
-            throw new IllegalArgumentException("Must accept the latest Terms of Use version: " + latestTerms.getVersion());
+            throw new IllegalArgumentException(
+                    "Must accept the latest Terms of Use version: " + latestTerms.getVersion());
         }
-        DocumentResponseDto touDocDto = documentService.getByVersion(Document.DocumentType.TERMS_OF_USE, agreementDTO.getTermsOfUseVersion());
-        agreement.setTermsOfUse(repo.findByTypeAndVersion(Document.DocumentType.TERMS_OF_USE, agreementDTO.getTermsOfUseVersion())
+        DocumentResponseDto touDocDto = documentService.getByVersion(Document.DocumentType.TERMS_OF_USE,
+                agreementDTO.getTermsOfUseVersion());
+        agreement.setTermsOfUse(repo
+                .findByTypeAndVersion(Document.DocumentType.TERMS_OF_USE, agreementDTO.getTermsOfUseVersion())
                 .orElseThrow(() -> new IllegalStateException("Terms of Use document not found after verification")));
         agreement.setTermsOfUseAcceptedAt(LocalDateTime.now());
         log.debug("Terms of Use {} accepted at {}", touDocDto.getVersion(), agreement.getTermsOfUseAcceptedAt());
@@ -316,15 +378,21 @@ public class TeacherService {
         // 5. Verify and set Teacher Agreement
         DocumentResponseDto latestTeacherAgreement = documentService.getLatest(Document.DocumentType.TEACHER_AGREEMENT);
         if (!latestTeacherAgreement.getVersion().equals(agreementDTO.getTeacherAgreementVersion())) {
-            log.error("Invalid Teacher Agreement version provided: {}, latest version: {}", 
+            log.error("Invalid Teacher Agreement version provided: {}, latest version: {}",
                     agreementDTO.getTeacherAgreementVersion(), latestTeacherAgreement.getVersion());
-            throw new IllegalArgumentException("Must accept the latest Teacher Agreement version: " + latestTeacherAgreement.getVersion());
+            throw new IllegalArgumentException(
+                    "Must accept the latest Teacher Agreement version: " + latestTeacherAgreement.getVersion());
         }
-        DocumentResponseDto taDocDto = documentService.getByVersion(Document.DocumentType.TEACHER_AGREEMENT, agreementDTO.getTeacherAgreementVersion());
-        agreement.setTeacherAgreement(repo.findByTypeAndVersion(Document.DocumentType.TEACHER_AGREEMENT, agreementDTO.getTeacherAgreementVersion())
-                .orElseThrow(() -> new IllegalStateException("Teacher Agreement document not found after verification")));
+        DocumentResponseDto taDocDto = documentService.getByVersion(Document.DocumentType.TEACHER_AGREEMENT,
+                agreementDTO.getTeacherAgreementVersion());
+        agreement.setTeacherAgreement(repo
+                .findByTypeAndVersion(Document.DocumentType.TEACHER_AGREEMENT,
+                        agreementDTO.getTeacherAgreementVersion())
+                .orElseThrow(
+                        () -> new IllegalStateException("Teacher Agreement document not found after verification")));
         agreement.setTeacherAgreementAcceptedAt(LocalDateTime.now());
-        log.debug("Teacher Agreement {} accepted at {}", taDocDto.getVersion(), agreement.getTeacherAgreementAcceptedAt());
+        log.debug("Teacher Agreement {} accepted at {}", taDocDto.getVersion(),
+                agreement.getTeacherAgreementAcceptedAt());
 
         // 6. Set the validated agreement on teacher
         teacher.setAgreement(agreement);
@@ -341,18 +409,75 @@ public class TeacherService {
         return g;
     }
 
+    /**
+     * CRITICAL SECURITY: Validate password complexity
+     * Requirements:
+     * - Minimum 8 characters
+     * - At least 1 uppercase letter
+     * - At least 1 lowercase letter
+     * - At least 1 digit
+     * - At least 1 special character (@$!%*?&#)
+     */
+    private void validatePasswordComplexity(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+
+        boolean hasUpper = false;
+        boolean hasLower = false;
+        boolean hasDigit = false;
+        boolean hasSpecial = false;
+
+        String specialChars = "@$!%*?&#";
+
+        for (char c : password.toCharArray()) {
+            if (Character.isUpperCase(c))
+                hasUpper = true;
+            else if (Character.isLowerCase(c))
+                hasLower = true;
+            else if (Character.isDigit(c))
+                hasDigit = true;
+            else if (specialChars.indexOf(c) >= 0)
+                hasSpecial = true;
+        }
+
+        if (!hasUpper) {
+            throw new IllegalArgumentException("Password must contain at least one uppercase letter");
+        }
+        if (!hasLower) {
+            throw new IllegalArgumentException("Password must contain at least one lowercase letter");
+        }
+        if (!hasDigit) {
+            throw new IllegalArgumentException("Password must contain at least one digit");
+        }
+        if (!hasSpecial) {
+            throw new IllegalArgumentException("Password must contain at least one special character (@$!%*?&#)");
+        }
+
+        // Check for common weak passwords
+        String lowerPassword = password.toLowerCase();
+        String[] weakPasswords = { "password", "12345678", "qwerty", "admin123", "welcome1" };
+        for (String weak : weakPasswords) {
+            if (lowerPassword.contains(weak)) {
+                throw new IllegalArgumentException("Password is too common. Please choose a stronger password");
+            }
+        }
+
+        log.debug("Password complexity validation passed");
+    }
+
     private void updateSubjectMappings(Teacher teacher, Set<Long> subjectIds) {
         log.info("Updating subject mappings for teacher: {}", teacher.getId());
-        
+
         // Remove existing mappings
         subjectMappingRepository.deleteByTeacherId(teacher.getId());
-        
+
         // Skip if no subjects
         if (subjectIds == null || subjectIds.isEmpty()) {
             log.info("No subject mappings to add for teacher: {}", teacher.getId());
             return;
         }
-        
+
         // Add new subjects
         int addedCount = 0;
         for (Long subjectId : subjectIds) {
@@ -366,19 +491,19 @@ public class TeacherService {
         }
         log.info("Added {} subject mappings for teacher: {}", addedCount, teacher.getId());
     }
-    
+
     private void updateExtraSubjectMappings(Teacher teacher, Set<Long> extraSubjectIds) {
         log.info("Updating extra subject mappings for teacher: {}", teacher.getId());
-        
+
         // Remove existing mappings
         extraSubjectMappingRepository.deleteByTeacherId(teacher.getId());
-        
+
         // Skip if no extra subjects
         if (extraSubjectIds == null || extraSubjectIds.isEmpty()) {
             log.info("No extra subject mappings to add for teacher: {}", teacher.getId());
             return;
         }
-        
+
         // Add new extra subjects
         int addedCount = 0;
         for (Long extraSubjectId : extraSubjectIds) {
@@ -395,16 +520,16 @@ public class TeacherService {
 
     private void updatePreferredAreas(Teacher teacher, Set<String> preferredAreasSet) {
         log.info("Updating preferred areas for teacher: {}", teacher.getId());
-        
+
         // Remove existing area mappings
         preferredAreaMappingRepository.deleteByTeacherId(teacher.getId());
-        
+
         // Skip if no preferred areas
         if (preferredAreasSet == null || preferredAreasSet.isEmpty()) {
             log.info("No preferred areas to add for teacher: {}", teacher.getId());
             return;
         }
-        
+
         // Add new preferred areas
         int addedCount = 0;
         for (String area : preferredAreasSet) {
@@ -419,13 +544,13 @@ public class TeacherService {
         log.info("Added {} preferred area mappings for teacher: {}", addedCount, teacher.getId());
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public List<TeacherEducationDTO> updateTeacherEducation(Long teacherId, List<TeacherEducationDTO> educationDTOs) {
         log.info("Updating education details for teacher: {}", teacherId);
-        
+
         // 1. Validate teacher exists
         Teacher teacher = teacherRepository.findById(teacherId)
-            .orElseThrow(() -> new ResourceNotFoundException("Teacher", "id", teacherId));
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher", "id", teacherId));
 
         // 2. Validate input
         if (educationDTOs == null || educationDTOs.isEmpty()) {
@@ -445,42 +570,42 @@ public class TeacherService {
 
         // 5. Convert DTOs to entities and save
         List<TeacherEducation> educationEntities = educationDTOs.stream()
-            .map(dto -> {
-                TeacherEducation education = TeacherEducationConverter.toEntity(dto, teacher);
-                return teacherEducationRepository.save(education);
-            })
-            .collect(Collectors.toList());
+                .map(dto -> {
+                    TeacherEducation education = TeacherEducationConverter.toEntity(dto, teacher);
+                    return teacherEducationRepository.save(education);
+                })
+                .collect(Collectors.toList());
 
-        log.info("Successfully updated {} education records for teacher: {}", 
+        log.info("Successfully updated {} education records for teacher: {}",
                 educationEntities.size(), teacherId);
 
         // 6. Return updated records
         return TeacherEducationConverter.toDtoList(educationEntities);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, timeout = 30)
     public List<TeacherEducationDTO> getTeacherEducation(Long teacherId) {
         log.info("Fetching education details for teacher: {}", teacherId);
-        
+
         // Verify teacher exists
         if (!teacherRepository.existsById(teacherId)) {
             throw new ResourceNotFoundException("Teacher", "id", teacherId);
         }
 
         // Get education records sorted by passing year
-        List<TeacherEducation> educationRecords = 
-            teacherEducationRepository.findByTeacherIdOrderByPassingYearDesc(teacherId);
-        
+        List<TeacherEducation> educationRecords = teacherEducationRepository
+                .findByTeacherIdOrderByPassingYearDesc(teacherId);
+
         return TeacherEducationConverter.toDtoList(educationRecords);
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public TeacherEducationDTO addTeacherEducation(Long teacherId, TeacherEducationDTO educationDTO) {
         log.info("Adding new education record for teacher: {}", teacherId);
-        
+
         // 1. Validate teacher exists
         Teacher teacher = teacherRepository.findById(teacherId)
-            .orElseThrow(() -> new ResourceNotFoundException("Teacher", "id", teacherId));
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher", "id", teacherId));
 
         // 2. Validate input
         if (educationDTO == null) {
@@ -491,28 +616,27 @@ public class TeacherService {
         // 3. Convert and save
         TeacherEducation education = TeacherEducationConverter.toEntity(educationDTO, teacher);
         education = teacherEducationRepository.save(education);
-        
+
         log.info("Successfully added education record for teacher: {}", teacherId);
-        
+
         return TeacherEducationConverter.toDto(education);
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public void deleteTeacherEducation(Long teacherId, Long educationId) {
         log.info("Deleting education record {} for teacher: {}", educationId, teacherId);
-        
+
         // 1. Verify the education record exists and belongs to the teacher
         TeacherEducation education = teacherEducationRepository.findById(educationId)
-            .orElseThrow(() -> new ResourceNotFoundException("Education record", "id", educationId));
-            
+                .orElseThrow(() -> new ResourceNotFoundException("Education record", "id", educationId));
+
         if (!education.getTeacher().getId().equals(teacherId)) {
             throw new IllegalArgumentException("Education record does not belong to the specified teacher");
         }
 
         // 2. Delete the record
         teacherEducationRepository.deleteById(educationId);
-        
+
         log.info("Successfully deleted education record {} for teacher: {}", educationId, teacherId);
     }
 }
-
