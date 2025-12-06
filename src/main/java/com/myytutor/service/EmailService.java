@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -47,6 +48,10 @@ public class EmailService {
             helper.setSubject("🔐 Verify Your Email - MyyTutor Registration");
             helper.setText(finalContent, true);
 
+            // Embed logo image
+            ClassPathResource logoResource = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logoResource);
+
             mailSender.send(message);
             log.info("OTP email sent successfully to: {}", to);
         } catch (Exception e) {
@@ -80,6 +85,10 @@ public class EmailService {
             helper.setSubject("🎉 Registration Successful - Welcome to MyyTutor!");
             helper.setText(finalContent, true);
 
+            // Embed logo image
+            ClassPathResource logoResource = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logoResource);
+
             mailSender.send(message);
             log.info("Registration success email sent to: {}", to);
         } catch (Exception e) {
@@ -106,6 +115,10 @@ public class EmailService {
             helper.setSubject("✅ Email Verified Successfully - MyyTutor");
             helper.setText(finalContent, true);
 
+            // Embed logo image
+            ClassPathResource logoResource = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logoResource);
+
             mailSender.send(message);
             log.info("Verification success email sent to: {}", to);
         } catch (Exception e) {
@@ -131,6 +144,10 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject("Welcome to Our Community!");
             helper.setText(finalContent, true);
+
+            // Embed logo image
+            ClassPathResource logoResource = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logoResource);
 
             mailSender.send(message);
             log.info("Welcome email sent to: {}", to);

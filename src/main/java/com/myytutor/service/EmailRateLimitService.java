@@ -6,6 +6,7 @@ import com.myytutor.repository.EmailRateLimitRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,9 @@ public class EmailRateLimitService {
     @Autowired
     private EmailRateLimitRepository rateLimitRepository;
 
+    @Value("${app.rate-limit.ip-check-enabled:true}")
+    private boolean ipCheckEnabled;
+
     // Rate limit configurations
     private static final int OTP_MAX_PER_EMAIL_PER_HOUR = 3;
     private static final int OTP_MAX_PER_IP_PER_HOUR = 5;
@@ -43,6 +47,12 @@ public class EmailRateLimitService {
      */
     @Transactional(timeout = 30)
     public void checkAndRecordEmailAttempt(String email, String ipAddress, EmailType emailType) {
+        // Skip all rate limit checks if disabled (for testing)
+        if (!ipCheckEnabled) {
+            log.debug("Rate limiting disabled - skipping checks for: {} to {}", emailType, email);
+            return;
+        }
+
         LocalDateTime now = LocalDateTime.now();
 
         // Special strict limits for OTP emails
