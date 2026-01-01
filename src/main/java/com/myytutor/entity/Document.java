@@ -26,13 +26,12 @@ public class Document {
 	@Column(name = "type", length = 50, nullable = false)
 	private DocumentType type;
 
-	@Column(length = 20,updatable =false, nullable = false)
+	@Column(length = 20, updatable = false, nullable = false)
 	private String version;
 
-	@Column(name = "published_at",updatable =false, nullable = false)
+	@Column(name = "published_at", updatable = false, nullable = false)
 	private LocalDateTime publishedAt;
 
-	
 	@Lob
 	@Column(name = "content", columnDefinition = "TEXT", nullable = false, updatable = false)
 	private String content;
@@ -114,6 +113,6 @@ public class Document {
 	}
 
 	public enum DocumentType {
-		PRIVACY_POLICY, TERMS_OF_USE, TEACHER_AGREEMENT, USER_AGREEMENT
+		PRIVACY_POLICY, TERMS_OF_USE, TEACHER_AGREEMENT, USER_AGREEMENT, REFUND_POLICY, COOKIE_POLICY, FAQ_DOCUMENT
 	}
 }

@@ -41,7 +41,22 @@ public class InquiryService {
     private WhatsAppService whatsAppService;
 
     @Autowired
+    private com.myytutor.service.EmailService emailService;
+
+    @Autowired
     private HtmlSanitizer htmlSanitizer;
+
+    /**
+     * Convert minutes from start of day to 24-hour format (HH:MM)
+     * Example: 540 -> 09:00, 1020 -> 17:00
+     */
+    private String formatTimeFromMinutes(Integer minutes) {
+        if (minutes == null)
+            return "Not specified";
+        int hours = minutes / 60;
+        int mins = minutes % 60;
+        return String.format("%02d:%02d", hours, mins);
+    }
 
     private void validateSubjects(List<Long> subjectIds) {
         if (subjectIds == null || subjectIds.isEmpty()) {
@@ -187,6 +202,18 @@ public class InquiryService {
         } catch (Exception e) {
             log.error("Failed to send WhatsApp notifications for inquiry {}: {}", inquiry.getId(), e.getMessage());
             // Don't fail inquiry creation if WhatsApp fails
+        }
+
+        // Send full inquiry to consultant via email (copy-paste friendly)
+        try {
+            // Format time to 24-hour format for email display
+            String startTime = formatTimeFromMinutes(inquiry.getSelectedStartTime());
+            String endTime = formatTimeFromMinutes(inquiry.getSelectedEndTime());
+            String formattedTimeWindow = startTime + " - " + endTime;
+
+            emailService.sendConsultantInquiry(inquiry, formattedTimeWindow);
+        } catch (Exception e) {
+            log.error("Failed to send consultant email for inquiry {}: {}", inquiry.getId(), e.getMessage());
         }
 
         return inquiry;

@@ -26,8 +26,7 @@ public class TeacherEducationDTO {
     private Integer passingYear;
 
     @NotBlank(message = "Grade is required")
-    @Pattern(regexp = "^(A\\+|A|B\\+|B|C\\+|C|D|F|First Class|Second Class|Third Class|Pass|[0-9]{1,2}(\\.\\d{1,2})?%?)$", 
-            message = "Invalid grade format. Allowed formats: A+, A, B+, B, C+, C, D, F, First Class, Second Class, Third Class, Pass, or percentage (e.g., 85% or 85.5%)")
+    @Pattern(regexp = "^(A\\+|A|B\\+|B|C\\+|C|D|F|First Class|Second Class|Third Class|Pass|[0-9]{1,2}(\\.\\d{1,2})?%?)$", message = "Invalid grade format. Allowed formats: A+, A, B+, B, C+, C, D, F, First Class, Second Class, Third Class, Pass, or percentage (e.g., 85% or 85.5%)")
     private String grade;
 
     // Default constructor

@@ -24,10 +24,10 @@ public class WhatsAppConfig {
     @Value("${whatsapp.admin.phone}")
     private String adminPhone;
 
-    @Value("${whatsapp.community.id}")
+    @Value("${whatsapp.community.id:}")
     private String communityId;
 
-    @Value("${whatsapp.community.invite.link:${whatsapp.community.id}}")
+    @Value("${whatsapp.community.invite.link:}")
     private String communityInviteLink;
 
     @Value("${whatsapp.verify.token}")
@@ -59,7 +59,12 @@ public class WhatsAppConfig {
     }
 
     public String getCommunityInviteLink() {
-        return communityInviteLink;
+        // Return invite link if set, else fallback to community ID (which is the full
+        // URL)
+        if (communityInviteLink != null && !communityInviteLink.trim().isEmpty()) {
+            return communityInviteLink;
+        }
+        return communityId;
     }
 
     public String getVerifyToken() {

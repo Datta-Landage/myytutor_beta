@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import com.myytutor.config.WhatsAppConfig;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -23,6 +24,12 @@ public class EmailService {
 
     @Autowired
     private TemplateEngine templateEngine;
+
+    @Autowired
+    private WhatsAppConfig whatsAppConfig;
+
+    @Value("${mail.consult:}")
+    private String consultEmail;
 
     @Value("${mail.from}")
     private String fromEmail;
@@ -72,6 +79,8 @@ public class EmailService {
             context.setVariable("registrationDate", java.time.LocalDateTime.now().format(
                     java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy 'at' hh:mm a")));
             context.setVariable("teacher", teacher);
+            // Add WhatsApp community link for email templates
+            context.setVariable("communityLink", whatsAppConfig.getCommunityInviteLink());
 
             // Process registration success template with layout
             String successContent = templateEngine.process("email/registration_success", context);
@@ -94,6 +103,43 @@ public class EmailService {
         } catch (Exception e) {
             // CRITICAL: In @Async methods, exceptions are swallowed - log only
             log.error("CRITICAL: Failed to send registration success email to: {}", to, e);
+        }
+    }
+
+    @Async
+    public void sendConsultantInquiry(com.myytutor.entity.Inquiry inquiry, String formattedTimeWindow) {
+        try {
+            if (consultEmail == null || consultEmail.trim().isEmpty()) {
+                log.warn("Consultant email (mail.consult) is not configured - skipping consultant notification");
+                return;
+            }
+
+            Context context = new Context();
+            context.setVariable("subject", "📩 New Inquiry Received - Copy-Paste Format");
+            context.setVariable("inquiry", inquiry);
+            context.setVariable("formattedTimeWindow", formattedTimeWindow);
+            context.setVariable("communityLink", whatsAppConfig.getCommunityInviteLink());
+
+            String body = templateEngine.process("email/consultant_inquiry", context);
+            context.setVariable("body", body);
+            String finalContent = templateEngine.process("email/layout", context);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            helper.setFrom(fromEmail);
+            helper.setTo(consultEmail);
+            helper.setSubject("📩 New Inquiry Received - Copy-Paste Format");
+            helper.setText(finalContent, true);
+
+            // Embed logo image
+            ClassPathResource logoResource = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logoResource);
+
+            mailSender.send(message);
+            log.info("Consultant inquiry email sent to: {} for inquiry #{}", consultEmail, inquiry.getId());
+        } catch (Exception e) {
+            log.error("Failed to send consultant inquiry email for inquiry #{}: {}", inquiry.getId(), e.getMessage(),
+                    e);
         }
     }
 
@@ -155,5 +201,26 @@ public class EmailService {
             // CRITICAL: In @Async methods, exceptions are swallowed - log only
             log.error("CRITICAL: Failed to send welcome email to: {}", to, e);
         }
+    }
+
+    /**
+     * Getter for JavaMailSender (used by schedulers)
+     */
+    public JavaMailSender getJavaMailSender() {
+        return mailSender;
+    }
+
+    /**
+     * Getter for TemplateEngine (used by schedulers)
+     */
+    public TemplateEngine getTemplateEngine() {
+        return templateEngine;
+    }
+
+    /**
+     * Getter for from email (used by schedulers)
+     */
+    public String getFromEmail() {
+        return fromEmail;
     }
 }

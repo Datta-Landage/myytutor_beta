@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class TeacherEducationConverter {
-    
+
     public static TeacherEducation toEntity(TeacherEducationDTO dto, Teacher teacher) {
         if (dto == null) {
             return null;
@@ -23,7 +23,7 @@ public class TeacherEducationConverter {
         entity.setPassingYear(dto.getPassingYear());
         entity.setGrade(dto.getGrade());
         entity.setTeacher(teacher);
-        
+
         return entity;
     }
 
@@ -33,12 +33,11 @@ public class TeacherEducationConverter {
         }
 
         return new TeacherEducationDTO(
-            entity.getId(),
-            entity.getDegree(),
-            entity.getInstitution(),
-            entity.getPassingYear(),
-            entity.getGrade()
-        );
+                entity.getId(),
+                entity.getDegree(),
+                entity.getInstitution(),
+                entity.getPassingYear(),
+                entity.getGrade());
     }
 
     public static List<TeacherEducationDTO> toDtoList(List<TeacherEducation> entities) {
