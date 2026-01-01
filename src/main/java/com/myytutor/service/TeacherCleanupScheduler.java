@@ -25,7 +25,8 @@ public class TeacherCleanupScheduler {
 
     /**
      * Scheduled task that runs daily at 2:00 AM
-     * Removes teacher accounts with unverified emails where OTP is older than 24 hours
+     * Removes teacher accounts with unverified emails where OTP is older than 24
+     * hours
      * 
      * This allows users to:
      * - Request new OTP if they forgot to verify
@@ -37,21 +38,21 @@ public class TeacherCleanupScheduler {
     public void cleanupUnverifiedAccounts() {
         try {
             log.info("Starting cleanup of unverified teacher accounts...");
-            
+
             // Calculate cutoff time: 24 hours ago
             LocalDateTime cutoffTime = LocalDateTime.now().minusHours(24);
-            
+
             // Find and delete teachers who:
             // 1. Email is not verified (emailVerified = false)
             // 2. OTP was generated more than 24 hours ago
             int deletedCount = teacherRepository.deleteByEmailVerifiedFalseAndEmailOtpGeneratedAtBefore(cutoffTime);
-            
+
             if (deletedCount > 0) {
                 log.info("Cleanup completed: {} unverified teacher account(s) removed", deletedCount);
             } else {
                 log.info("Cleanup completed: No unverified accounts found to remove");
             }
-            
+
         } catch (Exception e) {
             log.error("Error during cleanup of unverified accounts", e);
         }
@@ -66,21 +67,22 @@ public class TeacherCleanupScheduler {
     public void cleanupExpiredOtps() {
         try {
             log.info("Starting cleanup of expired OTPs...");
-            
-            // Calculate cutoff time: 1 hour ago (OTP is valid for 5 minutes, so 1 hour is safe)
+
+            // Calculate cutoff time: 1 hour ago (OTP is valid for 5 minutes, so 1 hour is
+            // safe)
             LocalDateTime cutoffTime = LocalDateTime.now().minusHours(1);
-            
+
             // Clear OTP fields for accounts where:
             // 1. Email is already verified
             // 2. OTP was generated more than 1 hour ago
             int updatedCount = teacherRepository.clearExpiredOtps(cutoffTime);
-            
+
             if (updatedCount > 0) {
                 log.info("OTP cleanup completed: {} expired OTP(s) cleared", updatedCount);
             } else {
                 log.info("OTP cleanup completed: No expired OTPs found to clear");
             }
-            
+
         } catch (Exception e) {
             log.error("Error during cleanup of expired OTPs", e);
         }

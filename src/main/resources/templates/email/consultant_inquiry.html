@@ -1,0 +1,356 @@
+<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif">
+  <h2 style="color: #111; font-size: 18px; font-weight: 700; margin: 0 0 8px 0">
+    📩 New Student Inquiry
+  </h2>
+  <p style="color: #6b7280; font-size: 13px; margin: 0">
+    Received on [[${inquiry.createdAt}]]
+  </p>
+
+  <!-- Inquiry Details Section -->
+  <div
+    style="
+      margin-top: 16px;
+      padding: 14px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border-left: 4px solid #2563eb;
+    "
+  >
+    <h3
+      style="
+        color: #1f2937;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 10px 0;
+      "
+    >
+      📋 Full Inquiry Details:
+    </h3>
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px">
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Inquiry ID:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.id}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Name:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.name}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Phone:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.phone}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Class:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.classStandard}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Board:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.board}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Subjects:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.message}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Location:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.address}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          Start Date:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.selectedStartDate}]]
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          "
+        >
+          End Date:
+        </td>
+        <td
+          style="
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${inquiry.selectedEndDate}]]
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 0; color: #6b7280">Preferred Time:</td>
+        <td
+          style="
+            padding: 6px 0;
+            color: #111;
+            font-weight: 600;
+            text-align: right;
+          "
+        >
+          [[${formattedTimeWindow}]]
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Copy-Paste Block -->
+  <div
+    style="
+      margin-top: 16px;
+      padding: 14px;
+      background: #eff6ff;
+      border-radius: 8px;
+      border-left: 4px solid #0284c7;
+    "
+  >
+    <h3
+      style="
+        color: #1e40af;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0 0 10px 0;
+      "
+    >
+      🔗 Quick Share Format (Copy Below):
+    </h3>
+    <pre
+      style="
+        background: #ffffff;
+        border: 1px solid #bfdbfe;
+        padding: 10px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        color: #111;
+        overflow-x: auto;
+        margin: 0;
+      "
+    >
+Inquiry ID: [[${inquiry.id}]]
+Class: [[${inquiry.classStandard}]]
+Board: [[${inquiry.board}]]
+Subjects: [[${inquiry.message}]]
+Location: [[${inquiry.address}]]
+Start Date: [[${inquiry.selectedStartDate}]]
+End Date: [[${inquiry.selectedEndDate}]]
+Time: [[${formattedTimeWindow}]]</pre
+    >
+  </div>
+
+  <!-- WhatsApp Community Link (Highlighted) -->
+  <div
+    style="
+      margin-top: 16px;
+      padding: 16px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-radius: 8px;
+      border: 2px solid #0284c7;
+      text-align: center;
+    "
+  >
+    <h3
+      style="
+        color: #1e40af;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+      "
+    >
+      👥 Join WhatsApp Community
+    </h3>
+    <p style="color: #1e40af; font-size: 12px; margin: 0 0 10px 0">
+      Teachers receive inquiries here first:
+    </p>
+    <a
+      th:href="${communityLink}"
+      href="${communityLink}"
+      style="
+        display: inline-block;
+        background: #0284c7;
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 13px;
+      "
+      >Join WhatsApp Community</a
+    >
+    <p style="margin-top: 8px; font-size: 12px; color: #1e40af">
+      Or open this link directly:
+      <a
+        th:href="${communityLink}"
+        href="${communityLink}"
+        th:text="${communityLink}"
+        style="color: #1d4ed8; text-decoration: none"
+      ></a>
+    </p>
+  </div>
+
+  <div
+    style="
+      margin-top: 16px;
+      padding: 12px;
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      border-radius: 6px;
+      color: #92400e;
+      font-size: 12px;
+    "
+  >
+    <strong>Next Steps:</strong>
+    <ul style="margin: 8px 0; padding-left: 18px">
+      <li>Contact the student about teaching requirements</li>
+      <li>Post inquiry in WhatsApp community for available teachers</li>
+      <li>Coordinate teacher matching and finalize sessions</li>
+    </ul>
+  </div>
+</div>

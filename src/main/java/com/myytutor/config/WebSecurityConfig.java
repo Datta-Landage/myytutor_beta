@@ -14,6 +14,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.beans.factory.annotation.Value;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -23,6 +24,9 @@ public class WebSecurityConfig {
 
     @Autowired
     private FrontendKeyFilter frontendKeyFilter;
+
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -41,8 +45,16 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow all origins with credentials (using patterns, not wildcard *)
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+
+        // Allow configured origins
+        if (allowedOrigins != null && !allowedOrigins.trim().isEmpty()) {
+            configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
+        } else {
+            // STRICT FALLBACK - Do not allow * by default if config is missing
+            System.err.println("WARNING: No CORS allowed origins configured! Denying all cross-origin requests.");
+            configuration.setAllowedOriginPatterns(Collections.emptyList());
+        }
+        
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("X-FRONTEND-KEY", "Authorization", "Content-Type"));

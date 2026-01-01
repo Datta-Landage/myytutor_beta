@@ -6,7 +6,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "teacher", uniqueConstraints = { @UniqueConstraint(columnNames = { "email" }) })
+@Table(name = "teacher", uniqueConstraints = { @UniqueConstraint(columnNames = { "email" }) }, indexes = {
+        @Index(name = "idx_teacher_email", columnList = "email"),
+        @Index(name = "idx_teacher_email_verified", columnList = "email_verified"),
+        @Index(name = "idx_teacher_created_at", columnList = "created_at"),
+        @Index(name = "idx_teacher_email_verified_created", columnList = "email_verified,created_at"),
+        @Index(name = "idx_teacher_full_name_created", columnList = "full_name,created_at")
+})
 public class Teacher {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

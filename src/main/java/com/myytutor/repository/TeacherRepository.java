@@ -12,18 +12,20 @@ import java.time.LocalDateTime;
 public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 	// Teacher entity doesn't have a 'username' field. Use email for lookup instead.
 	Teacher findByEmail(String email);
-	
+
 	/**
 	 * Check if a teacher with verified email and completed registration exists
+	 * 
 	 * @param email The email to check
 	 * @return true if teacher is fully registered, false otherwise
 	 */
 	@Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM Teacher t " +
-		   "WHERE t.email = :email AND t.emailVerified = true AND t.fullName IS NOT NULL")
+			"WHERE t.email = :email AND t.emailVerified = true AND t.fullName IS NOT NULL")
 	boolean existsByEmailAndFullyRegistered(@Param("email") String email);
 
 	/**
 	 * Delete unverified teacher accounts where OTP has expired
+	 * 
 	 * @param cutoffTime The time before which OTPs are considered expired
 	 * @return Number of deleted records
 	 */
@@ -31,11 +33,22 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 
 	/**
 	 * Clear expired OTP fields from verified accounts
+	 * 
 	 * @param cutoffTime The time before which OTPs should be cleared
 	 * @return Number of updated records
 	 */
 	@Modifying
 	@Query("UPDATE Teacher t SET t.emailOtp = null, t.emailOtpGeneratedAt = null " +
-		   "WHERE t.emailVerified = true AND t.emailOtpGeneratedAt < :cutoffTime")
+			"WHERE t.emailVerified = true AND t.emailOtpGeneratedAt < :cutoffTime")
 	int clearExpiredOtps(@Param("cutoffTime") LocalDateTime cutoffTime);
+
+	/**
+	 * Find all verified teachers registered since a specific time
+	 * Used for daily registration notifications
+	 * 
+	 * @param startTime The time from which to fetch registered teachers
+	 * @return List of teachers registered after the given time
+	 */
+	@Query("SELECT t FROM Teacher t WHERE t.emailVerified = true AND t.fullName IS NOT NULL AND t.createdAt >= :startTime ORDER BY t.createdAt DESC")
+	java.util.List<Teacher> findTeachersRegisteredSince(@Param("startTime") LocalDateTime startTime);
 }
