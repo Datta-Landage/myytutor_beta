@@ -1,6 +1,7 @@
 package com.myytutor.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,9 +15,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import org.springframework.beans.factory.annotation.Value;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -25,7 +25,7 @@ public class WebSecurityConfig {
     @Autowired
     private FrontendKeyFilter frontendKeyFilter;
 
-    @Value("${app.cors.allowed-origins}")
+    @Value("${app.cors.allowed-origins:}")
     private String allowedOrigins;
 
     @Bean
@@ -46,18 +46,26 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow configured origins
-        if (allowedOrigins != null && !allowedOrigins.trim().isEmpty()) {
-            configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
-        } else {
-            // STRICT FALLBACK - Do not allow * by default if config is missing
-            System.err.println("WARNING: No CORS allowed origins configured! Denying all cross-origin requests.");
-            configuration.setAllowedOriginPatterns(Collections.emptyList());
+        if (allowedOrigins == null || allowedOrigins.trim().isEmpty()) {
+            throw new IllegalStateException(
+                    "CORS_ALLOWED_ORIGINS is NOT configured. Refusing to start for security reasons."
+            );
         }
-        
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("X-FRONTEND-KEY", "Authorization", "Content-Type"));
+
+        // 🔥 STRICT matching — NO patterns
+        configuration.setAllowedOrigins(
+                Arrays.stream(allowedOrigins.split(","))
+                        .map(String::trim)
+                        .toList()
+        );
+
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        );
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(
+                List.of("Authorization", "Content-Type", "X-FRONTEND-KEY")
+        );
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
