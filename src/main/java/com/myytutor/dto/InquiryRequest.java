@@ -40,7 +40,6 @@ public class InquiryRequest {
     @Max(value = 1440, message = "End time must be between 0 and 1440")
     private Integer selectedEndTime;
 
-    @NotEmpty(message = "At least one subject must be selected")
     private List<Long> selectedSubjectIds;
 
     private List<Long> selectedExtraSubjectIds;
@@ -50,6 +49,18 @@ public class InquiryRequest {
 
     @NotBlank(message = "Privacy policy version is required")
     private String privacyVersion;
+
+    @AssertTrue(message = "Please accept the Terms of Use before submitting")
+    private boolean termsAccepted;
+
+    @NotBlank(message = "Terms of Use version is required")
+    private String termsVersion;
+
+    @AssertTrue(message = "Please accept the User Agreement before submitting")
+    private boolean userAgreementAccepted;
+
+    @NotBlank(message = "User Agreement version is required")
+    private String userAgreementVersion;
 
     // Getters & Setters
     public String getName() {
@@ -162,6 +173,38 @@ public class InquiryRequest {
 
     public void setPrivacyVersion(String privacyVersion) {
         this.privacyVersion = privacyVersion;
+    }
+
+    public boolean isTermsAccepted() {
+        return termsAccepted;
+    }
+
+    public void setTermsAccepted(boolean termsAccepted) {
+        this.termsAccepted = termsAccepted;
+    }
+
+    public String getTermsVersion() {
+        return termsVersion;
+    }
+
+    public void setTermsVersion(String termsVersion) {
+        this.termsVersion = termsVersion;
+    }
+
+    public boolean isUserAgreementAccepted() {
+        return userAgreementAccepted;
+    }
+
+    public void setUserAgreementAccepted(boolean userAgreementAccepted) {
+        this.userAgreementAccepted = userAgreementAccepted;
+    }
+
+    public String getUserAgreementVersion() {
+        return userAgreementVersion;
+    }
+
+    public void setUserAgreementVersion(String userAgreementVersion) {
+        this.userAgreementVersion = userAgreementVersion;
     }
 }
 

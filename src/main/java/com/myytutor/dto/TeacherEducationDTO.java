@@ -85,9 +85,11 @@ public class TeacherEducationDTO {
 
     // Custom validation method
     public void validate() {
-        // Check if passing year is not in the future
-        if (passingYear != null && passingYear > Year.now().getValue()) {
-            throw new IllegalArgumentException("Passing year cannot be in the future");
+        if (passingYear != null) {
+            int currentYear = Year.now().getValue();
+            if (passingYear > currentYear + 5) {
+                throw new IllegalArgumentException("Passing year cannot be more than 5 years in the future");
+            }
         }
 
         // Standardize grade format

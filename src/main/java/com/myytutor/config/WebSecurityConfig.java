@@ -17,6 +17,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -25,8 +26,13 @@ public class WebSecurityConfig {
     @Autowired
     private FrontendKeyFilter frontendKeyFilter;
 
+    // CSV list or "*" for all
     @Value("${app.cors.allowed-origins:}")
     private String allowedOrigins;
+
+    // strict | permissive
+    @Value("${app.cors.mode:strict}")
+    private String corsMode;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -46,28 +52,37 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        if (allowedOrigins == null || allowedOrigins.trim().isEmpty()) {
-            throw new IllegalStateException(
-                    "CORS_ALLOWED_ORIGINS is NOT configured. Refusing to start for security reasons."
-            );
-        }
-
-        // 🔥 STRICT matching — NO patterns
-        configuration.setAllowedOrigins(
-                Arrays.stream(allowedOrigins.split(","))
-                        .map(String::trim)
-                        .toList()
-        );
-
-        configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        );
+        // Allow common methods including preflight
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(
-                List.of("Authorization", "Content-Type", "X-FRONTEND-KEY")
-        );
-        configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type", "X-FRONTEND-KEY"));
         configuration.setMaxAge(3600L);
+
+        // PERMISSIVE MODE => allow all origins (patterns), useful for dev/testing
+        if ("permissive".equalsIgnoreCase(corsMode)
+                || "*".equals(allowedOrigins != null ? allowedOrigins.trim() : "")) {
+            // Use patterns so Spring will echo actual Origin header when credentials=true
+            configuration.setAllowedOriginPatterns(List.of("*"));
+            configuration.setAllowCredentials(true);
+        } else {
+            // STRICT MODE => parse CSV list
+            if (allowedOrigins == null || allowedOrigins.trim().isEmpty()) {
+                throw new IllegalStateException("CORS_ALLOWED_ORIGINS must be set when app.cors.mode=strict");
+            }
+            List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+
+            // If any origin contains a wildcard (e.g. https://*.mahatutor.com) use patterns
+            boolean anyPattern = origins.stream().anyMatch(s -> s.contains("*"));
+            if (anyPattern) {
+                configuration.setAllowedOriginPatterns(origins);
+            } else {
+                configuration.setAllowedOrigins(origins);
+            }
+            configuration.setAllowCredentials(true); // keep credentials enabled for strict mode
+        }
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
