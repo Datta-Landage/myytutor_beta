@@ -52,8 +52,33 @@ public class Inquiry {
     @Column(name = "privacy_accepted_at")
     private LocalDateTime privacyAcceptedAt;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "terms_accepted", nullable = false)
+    private Boolean termsAccepted = false;
+
+    @Column(name = "terms_version")
+    private String termsVersion;
+
+    @Column(name = "terms_accepted_at")
+    private LocalDateTime termsAcceptedAt;
+
+    @Column(name = "user_agreement_accepted", nullable = false)
+    private Boolean userAgreementAccepted = false;
+
+    @Column(name = "user_agreement_version")
+    private String userAgreementVersion;
+
+    @Column(name = "user_agreement_accepted_at")
+    private LocalDateTime userAgreementAcceptedAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @Version
+    @Column(name = "lock_version")
+    private Long lockVersion = 0L;
 
     @OneToMany(mappedBy = "inquiry", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<InquirySubjectClassMapping> subjectMappings = new HashSet<>();
@@ -118,12 +143,76 @@ public class Inquiry {
         this.privacyAcceptedAt = privacyAcceptedAt;
     }
 
+    public Boolean getTermsAccepted() {
+        return termsAccepted;
+    }
+
+    public void setTermsAccepted(Boolean termsAccepted) {
+        this.termsAccepted = termsAccepted;
+    }
+
+    public String getTermsVersion() {
+        return termsVersion;
+    }
+
+    public void setTermsVersion(String termsVersion) {
+        this.termsVersion = termsVersion;
+    }
+
+    public LocalDateTime getTermsAcceptedAt() {
+        return termsAcceptedAt;
+    }
+
+    public void setTermsAcceptedAt(LocalDateTime termsAcceptedAt) {
+        this.termsAcceptedAt = termsAcceptedAt;
+    }
+
+    public Boolean getUserAgreementAccepted() {
+        return userAgreementAccepted;
+    }
+
+    public void setUserAgreementAccepted(Boolean userAgreementAccepted) {
+        this.userAgreementAccepted = userAgreementAccepted;
+    }
+
+    public String getUserAgreementVersion() {
+        return userAgreementVersion;
+    }
+
+    public void setUserAgreementVersion(String userAgreementVersion) {
+        this.userAgreementVersion = userAgreementVersion;
+    }
+
+    public LocalDateTime getUserAgreementAcceptedAt() {
+        return userAgreementAcceptedAt;
+    }
+
+    public void setUserAgreementAcceptedAt(LocalDateTime userAgreementAcceptedAt) {
+        this.userAgreementAcceptedAt = userAgreementAcceptedAt;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Long getLockVersion() {
+        return lockVersion;
+    }
+
+    public void setLockVersion(Long lockVersion) {
+        this.lockVersion = lockVersion;
     }
 
     public String getClassStandard() {

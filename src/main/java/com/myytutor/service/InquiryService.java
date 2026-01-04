@@ -9,6 +9,7 @@ import com.myytutor.util.HtmlSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -46,6 +47,9 @@ public class InquiryService {
     @Autowired
     private HtmlSanitizer htmlSanitizer;
 
+    @Value("${app.rate-limit.ip-check-enabled:true}")
+    private boolean rateLimitEnabled;
+
     /**
      * Convert minutes from start of day to 24-hour format (HH:MM)
      * Example: 540 -> 09:00, 1020 -> 17:00
@@ -58,28 +62,38 @@ public class InquiryService {
         return String.format("%02d:%02d", hours, mins);
     }
 
-    private void validateSubjects(List<Long> subjectIds) {
-        if (subjectIds == null || subjectIds.isEmpty()) {
+    private void validateSubjects(List<Long> subjectIds, List<Long> extraSubjectIds) {
+        boolean hasRegular = subjectIds != null && !subjectIds.isEmpty();
+        boolean hasExtra = extraSubjectIds != null && !extraSubjectIds.isEmpty();
+
+        if (!hasRegular && !hasExtra) {
             log.error("No subjects selected in the inquiry request");
             throw new IllegalArgumentException("At least one subject must be selected");
         }
 
-        // Check if all subjects exist
-        List<SubjectClass> subjects = subjectClassRepository.findAllById(subjectIds);
-        if (subjects.size() != subjectIds.size()) {
-            // Find which subject IDs don't exist
-            List<Long> existingIds = subjects.stream()
-                    .map(SubjectClass::getId)
-                    .toList();
-            List<Long> missingIds = subjectIds.stream()
-                    .filter(id -> !existingIds.contains(id))
-                    .toList();
-
-            log.error("Invalid subject IDs in request: {}", missingIds);
-            throw new IllegalArgumentException(
-                    String.format("The following subject IDs do not exist in the system: %s", missingIds));
+        // Check if regular subjects exist
+        if (hasRegular) {
+            List<SubjectClass> subjects = subjectClassRepository.findAllById(subjectIds);
+            if (subjects.size() != subjectIds.size()) {
+                List<Long> existingIds = subjects.stream().map(SubjectClass::getId).toList();
+                List<Long> missingIds = subjectIds.stream().filter(id -> !existingIds.contains(id)).toList();
+                log.error("Invalid regular subject IDs in request: {}", missingIds);
+                throw new IllegalArgumentException(String.format("The following subject IDs do not exist: %s", missingIds));
+            }
         }
-        log.debug("Successfully validated {} subjects", subjects.size());
+
+        // Check if extra subjects exist
+        if (hasExtra) {
+            List<ExtraSubject> extras = extraSubjectRepository.findAllById(extraSubjectIds);
+            if (extras.size() != extraSubjectIds.size()) {
+                List<Long> existingIds = extras.stream().map(ExtraSubject::getId).toList();
+                List<Long> missingIds = extraSubjectIds.stream().filter(id -> !existingIds.contains(id)).toList();
+                log.error("Invalid extra subject IDs in request: {}", missingIds);
+                throw new IllegalArgumentException(String.format("The following extra subject IDs do not exist: %s", missingIds));
+            }
+        }
+        log.debug("Successfully validated subjects (Regular: {}, Extra: {})", 
+            hasRegular ? subjectIds.size() : 0, hasExtra ? extraSubjectIds.size() : 0);
     }
 
     @Transactional(timeout = 30)
@@ -92,17 +106,21 @@ public class InquiryService {
         }
 
         // Check inquiry limit per phone number (5 per day)
-        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
-        long inquiryCount = inquiryRepository.countByPhoneAndCreatedAtBetween(req.getPhone(), startOfDay, endOfDay);
-
-        if (inquiryCount >= 5) {
-            log.warn("Phone {} exceeded daily inquiry limit: {} inquiries today", req.getPhone(), inquiryCount);
-            throw new IllegalArgumentException(
-                    "You have reached the maximum limit of 5 inquiries per day. Please try again tomorrow.");
+        // ONLY checks if rate limiting is ENABLED
+        if (rateLimitEnabled) {
+            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+            long inquiryCount = inquiryRepository.countByPhoneAndCreatedAtBetween(req.getPhone(), startOfDay, endOfDay);
+    
+            if (inquiryCount >= 5) {
+                log.warn("Phone {} exceeded daily inquiry limit: {} inquiries today", req.getPhone(), inquiryCount);
+                throw new IllegalArgumentException(
+                        "You have reached the maximum limit of 5 inquiries per day. Please try again tomorrow.");
+            }
+            log.debug("Phone {} has {} inquiries today (limit: 5)", req.getPhone(), inquiryCount);
+        } else {
+            log.info("Rate limiting disabled - skipping daily limit check for phone {}", req.getPhone());
         }
-
-        log.debug("Phone {} has {} inquiries today (limit: 5)", req.getPhone(), inquiryCount);
 
         // Validate privacy policy acceptance
         if (!req.isPrivacyAccepted()) {
@@ -122,8 +140,42 @@ public class InquiryService {
             throw new IllegalStateException("Privacy policy is not configured in the system");
         }
 
+        // Validate Terms of Use acceptance
+        if (!req.isTermsAccepted()) {
+            throw new IllegalArgumentException("Terms of Use must be accepted");
+        }
+
+        try {
+            DocumentResponseDto latestTerms = documentService.getLatest(DocumentType.TERMS_OF_USE);
+            if (!latestTerms.getVersion().equals(req.getTermsVersion())) {
+                throw new IllegalArgumentException(
+                        "Terms of Use version is outdated. Please accept the latest version: "
+                                + latestTerms.getVersion());
+            }
+        } catch (NoSuchElementException e) {
+            log.warn("No Terms of Use found in database");
+            throw new IllegalStateException("Terms of Use is not configured in the system");
+        }
+
+        // Validate User Agreement acceptance
+        if (!req.isUserAgreementAccepted()) {
+            throw new IllegalArgumentException("User Agreement must be accepted");
+        }
+
+        try {
+            DocumentResponseDto latestAgreement = documentService.getLatest(DocumentType.USER_AGREEMENT);
+            if (!latestAgreement.getVersion().equals(req.getUserAgreementVersion())) {
+                throw new IllegalArgumentException(
+                        "User Agreement version is outdated. Please accept the latest version: "
+                                + latestAgreement.getVersion());
+            }
+        } catch (NoSuchElementException e) {
+            log.warn("No User Agreement found in database");
+            throw new IllegalStateException("User Agreement is not configured in the system");
+        }
+
         // Validate subjects
-        validateSubjects(req.getSelectedSubjectIds());
+        validateSubjects(req.getSelectedSubjectIds(), req.getSelectedExtraSubjectIds());
 
         // Sanitize user inputs to prevent XSS attacks
         String sanitizedName = htmlSanitizer.sanitizeNotEmpty(req.getName());
@@ -152,10 +204,14 @@ public class InquiryService {
         inquiry.setPrivacyAccepted(req.isPrivacyAccepted());
         inquiry.setPrivacyVersion(req.getPrivacyVersion());
         inquiry.setPrivacyAcceptedAt(LocalDateTime.now());
+        inquiry.setTermsAccepted(req.isTermsAccepted());
+        inquiry.setTermsVersion(req.getTermsVersion());
+        inquiry.setTermsAcceptedAt(LocalDateTime.now());
+        inquiry.setUserAgreementAccepted(req.isUserAgreementAccepted());
+        inquiry.setUserAgreementVersion(req.getUserAgreementVersion());
+        inquiry.setUserAgreementAcceptedAt(LocalDateTime.now());
         inquiry.setCreatedAt(LocalDateTime.now());
-
-        inquiryRepository.save(inquiry);
-        log.info("Saved inquiry with ID: {}", inquiry.getId());
+        inquiry.setUpdatedAt(LocalDateTime.now());
 
         // Handle subject mappings
         if (req.getSelectedSubjectIds() != null && !req.getSelectedSubjectIds().isEmpty()) {
@@ -164,10 +220,10 @@ public class InquiryService {
                     InquirySubjectClassMapping mapping = new InquirySubjectClassMapping();
                     mapping.setInquiry(inquiry);
                     mapping.setSubjectClass(subjectClass);
-                    subjectMappingRepository.save(mapping);
+                    inquiry.getSubjectMappings().add(mapping);
                 });
             }
-            log.info("Added {} subject mappings", req.getSelectedSubjectIds().size());
+            log.info("Added {} subject mappings to collection", req.getSelectedSubjectIds().size());
         }
 
         // Handle extra subject mappings
@@ -177,45 +233,51 @@ public class InquiryService {
                     InquiryExtraSubjectMapping mapping = new InquiryExtraSubjectMapping();
                     mapping.setInquiry(inquiry);
                     mapping.setExtraSubject(extraSubject);
-                    extraSubjectMappingRepository.save(mapping);
+                    inquiry.getExtraSubjectMappings().add(mapping);
                 });
             }
-            log.info("Added {} extra subject mappings", req.getSelectedExtraSubjectIds().size());
+            log.info("Added {} extra subject mappings to collection", req.getSelectedExtraSubjectIds().size());
         }
+
+        final Inquiry savedInquiry = inquiryRepository.save(inquiry);
+        log.info("Saved inquiry with ID: {} and its mappings", savedInquiry.getId());
 
         // Send WhatsApp notifications (async - don't fail if WhatsApp fails)
         try {
             // 1. Send confirmation to customer
-            whatsAppService.sendInquiryConfirmation(inquiry.getPhone(), inquiry.getName(), inquiry.getId().toString());
+            whatsAppService.sendInquiryConfirmation(savedInquiry.getPhone(), savedInquiry.getName(), 
+                savedInquiry.getId() != null ? savedInquiry.getId().toString() : "N/A");
 
             // Small delay to avoid rate limiting in test mode
             Thread.sleep(1000);
 
             // 2. Broadcast to teacher community (short summary to admin)
-            whatsAppService.broadcastInquiryToCommunity(inquiry);
+            whatsAppService.broadcastInquiryToCommunity(savedInquiry);
 
             // Small delay between messages to same number (test mode limitation)
             Thread.sleep(2000);
 
             // 3. Send full details to admin
-            whatsAppService.sendFullInquiryToAdmin(inquiry);
+            whatsAppService.sendFullInquiryToAdmin(savedInquiry);
         } catch (Exception e) {
-            log.error("Failed to send WhatsApp notifications for inquiry {}: {}", inquiry.getId(), e.getMessage());
+            log.error("Failed to send WhatsApp notifications for inquiry {}: {}", 
+                savedInquiry.getId(), e.getMessage());
             // Don't fail inquiry creation if WhatsApp fails
         }
 
         // Send full inquiry to consultant via email (copy-paste friendly)
         try {
             // Format time to 24-hour format for email display
-            String startTime = formatTimeFromMinutes(inquiry.getSelectedStartTime());
-            String endTime = formatTimeFromMinutes(inquiry.getSelectedEndTime());
+            String startTime = formatTimeFromMinutes(savedInquiry.getSelectedStartTime());
+            String endTime = formatTimeFromMinutes(savedInquiry.getSelectedEndTime());
             String formattedTimeWindow = startTime + " - " + endTime;
 
-            emailService.sendConsultantInquiry(inquiry, formattedTimeWindow);
+            emailService.sendConsultantInquiry(savedInquiry, formattedTimeWindow);
         } catch (Exception e) {
-            log.error("Failed to send consultant email for inquiry {}: {}", inquiry.getId(), e.getMessage());
+            log.error("Failed to send consultant email for inquiry {}: {}", 
+                savedInquiry.getId(), e.getMessage());
         }
 
-        return inquiry;
+        return savedInquiry;
     }
 }

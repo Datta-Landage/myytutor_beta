@@ -131,8 +131,15 @@ public class Teacher {
     private TeacherAgreement agreement;
 
     // Audit fields
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @Version
+    @Column(name = "lock_version")
+    private Long lockVersion = 0L;
 
     // Basic field getters/setters
     public Long getId() {
@@ -409,5 +416,21 @@ public class Teacher {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Long getLockVersion() {
+        return lockVersion;
+    }
+
+    public void setLockVersion(Long lockVersion) {
+        this.lockVersion = lockVersion;
     }
 }

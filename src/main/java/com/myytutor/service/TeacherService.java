@@ -88,6 +88,7 @@ public class TeacherService {
         teacher.setEmail(req.getEmail());
         teacher.setEmailOtp(otp);
         teacher.setEmailOtpGeneratedAt(LocalDateTime.now());
+        teacher.setUpdatedAt(LocalDateTime.now());
         teacherRepository.save(teacher);
 
         // Send OTP via email
@@ -215,25 +216,23 @@ public class TeacherService {
         teacher.setAboutMe(sanitizedAboutMe);
         teacher.setMode(req.getMode());
         teacher.setExpectedFeePerHour(req.getExpectedFeePerHour());
+        teacher.setUpdatedAt(LocalDateTime.now());
 
         // 6. Save basic details first
-        teacher = teacherRepository.save(teacher);
-
-        // 7. Handle preferred areas mapping
+        // 6. Update preferred areas mapping
         updatePreferredAreas(teacher, req.getPreferredAreas());
 
-        // 8. Handle subject mappings
+        // 7. Update subject mappings
         updateSubjectMappings(teacher, req.getSubjectIds());
         updateExtraSubjectMappings(teacher, req.getAdditionalSubjects());
 
-        // 9. Handle availability mappings (Min: 1, Max: 3)
+        // 8. Update availability mappings
         updateTeacherAvailabilities(teacher, req.getAvailabilities());
 
-        // 10. Handle education mappings (Min: 1, Max: 3)
+        // 9. Update education mappings
         updateTeacherEducations(teacher, req.getEducations());
 
-        // 11. Save the teacher with all updates (including agreements, availabilities,
-        // and educations)
+        // 10. Save the teacher with all updates one-time (Cascading handles child entities)
         teacher = teacherRepository.save(teacher);
 
         // 11. Send registration success email with teacher details
@@ -268,8 +267,8 @@ public class TeacherService {
             dto.validate(); // Custom validation in DTO
         });
 
-        // First, remove all existing educations
-        teacherEducationRepository.deleteByTeacherId(teacher.getId());
+        // First, clear existing educations (Orphan removal will handle deletions)
+        teacher.getEducations().clear();
 
         // Add new education entries
         for (TeacherEducationDTO dto : educationDTOs) {
@@ -280,9 +279,9 @@ public class TeacherService {
             education.setPassingYear(dto.getPassingYear());
             education.setGrade(dto.getGrade());
 
-            // Save each education entry
-            teacherEducationRepository.save(education);
+            teacher.getEducations().add(education);
         }
+        log.info("Added {} educations to teacher collection", educationDTOs.size());
     }
 
     private void updateTeacherAvailabilities(Teacher teacher, List<TeacherAvailabilityDTO> availabilityDTOs) {
@@ -294,8 +293,8 @@ public class TeacherService {
             throw new IllegalArgumentException("Maximum 3 availability slots allowed");
         }
 
-        // First, remove all existing availabilities
-        teacherAvailabilityRepository.deleteByTeacherId(teacher.getId());
+        // First, clear existing availabilities
+        teacher.getAvailabilities().clear();
 
         // Add new availabilities
         for (TeacherAvailabilityDTO dto : availabilityDTOs) {
@@ -316,9 +315,9 @@ public class TeacherService {
             availability.setSaturday(dto.getSaturday());
             availability.setSunday(dto.getSunday());
 
-            // Save each availability
-            teacherAvailabilityRepository.save(availability);
+            teacher.getAvailabilities().add(availability);
         }
+        log.info("Added {} availabilities to teacher collection", availabilityDTOs.size());
     }
 
     private void validateAndUpdateAgreements(Teacher teacher, TeacherAgreementDTO agreementDTO) {
@@ -469,8 +468,8 @@ public class TeacherService {
     private void updateSubjectMappings(Teacher teacher, Set<Long> subjectIds) {
         log.info("Updating subject mappings for teacher: {}", teacher.getId());
 
-        // Remove existing mappings
-        subjectMappingRepository.deleteByTeacherId(teacher.getId());
+        // Clear existing mappings
+        teacher.getSubjects().clear();
 
         // Skip if no subjects
         if (subjectIds == null || subjectIds.isEmpty()) {
@@ -485,18 +484,18 @@ public class TeacherService {
                 TeacherSubjectMapping mapping = new TeacherSubjectMapping();
                 mapping.setTeacher(teacher);
                 mapping.setSubjectClass(subjectClass);
-                subjectMappingRepository.save(mapping);
+                teacher.getSubjects().add(mapping);
             });
             addedCount++;
         }
-        log.info("Added {} subject mappings for teacher: {}", addedCount, teacher.getId());
+        log.info("Added {} subject mappings to teacher collection", addedCount);
     }
 
     private void updateExtraSubjectMappings(Teacher teacher, Set<Long> extraSubjectIds) {
         log.info("Updating extra subject mappings for teacher: {}", teacher.getId());
 
-        // Remove existing mappings
-        extraSubjectMappingRepository.deleteByTeacherId(teacher.getId());
+        // Clear existing mappings
+        teacher.getExtraSubjects().clear();
 
         // Skip if no extra subjects
         if (extraSubjectIds == null || extraSubjectIds.isEmpty()) {
@@ -511,18 +510,18 @@ public class TeacherService {
                 TeacherExtraSubjectMapping mapping = new TeacherExtraSubjectMapping();
                 mapping.setTeacher(teacher);
                 mapping.setExtraSubject(extraSubject);
-                extraSubjectMappingRepository.save(mapping);
+                teacher.getExtraSubjects().add(mapping);
             });
             addedCount++;
         }
-        log.info("Added {} extra subject mappings for teacher: {}", addedCount, teacher.getId());
+        log.info("Added {} extra subject mappings to teacher collection", addedCount);
     }
 
     private void updatePreferredAreas(Teacher teacher, Set<String> preferredAreasSet) {
         log.info("Updating preferred areas for teacher: {}", teacher.getId());
 
-        // Remove existing area mappings
-        preferredAreaMappingRepository.deleteByTeacherId(teacher.getId());
+        // Clear existing area mappings
+        teacher.getPreferredAreas().clear();
 
         // Skip if no preferred areas
         if (preferredAreasSet == null || preferredAreasSet.isEmpty()) {
@@ -537,11 +536,11 @@ public class TeacherService {
                 TeacherPreferredAreaMapping mapping = new TeacherPreferredAreaMapping();
                 mapping.setTeacher(teacher);
                 mapping.setArea(area.trim());
-                preferredAreaMappingRepository.save(mapping);
+                teacher.getPreferredAreas().add(mapping);
                 addedCount++;
             }
         }
-        log.info("Added {} preferred area mappings for teacher: {}", addedCount, teacher.getId());
+        log.info("Added {} preferred area mappings to teacher collection", addedCount);
     }
 
     @Transactional(timeout = 30)
