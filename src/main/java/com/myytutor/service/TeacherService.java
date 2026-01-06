@@ -255,9 +255,7 @@ public class TeacherService {
             throw new IllegalArgumentException("At least one education entry is required");
         }
 
-        if (educationDTOs.size() > 3) {
-            throw new IllegalArgumentException("Maximum 3 education entries allowed");
-        }
+
 
         // Validate each education entry
         educationDTOs.forEach(dto -> {

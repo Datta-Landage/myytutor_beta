@@ -80,7 +80,7 @@ public class TeacherRegistrationRequest {
     private List<TeacherAvailabilityDTO> availabilities;
 
     @NotEmpty(message = "At least one education entry is required")
-    @Size(min = 1, max = 3, message = "Teacher must have between 1 and 3 education entries")
+    @Size(min = 1, message = "Teacher must have at least one education entry")
     @Valid
     private List<TeacherEducationDTO> educations;
 
