@@ -13,6 +13,12 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 	// Teacher entity doesn't have a 'username' field. Use email for lookup instead.
 	Teacher findByEmail(String email);
 
+	// Find by slug for public profile
+	java.util.Optional<Teacher> findBySlug(String slug);
+
+	// Check slug existence for uniqueness
+	boolean existsBySlug(String slug);
+
 	/**
 	 * Check if a teacher with verified email and completed registration exists
 	 * 

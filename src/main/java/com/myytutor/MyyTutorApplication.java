@@ -16,4 +16,15 @@ public class MyyTutorApplication {
 		SpringApplication.run(MyyTutorApplication.class, args);
 	}
 
+    @org.springframework.context.annotation.Bean
+    org.springframework.boot.CommandLineRunner runSlugBackfill(com.myytutor.service.TeacherService teacherService) {
+        return args -> {
+            try {
+                teacherService.backfillSlugs();
+            } catch (Exception e) {
+                System.err.println("[CRITICAL] Slug backfill failed: " + e.getMessage());
+            }
+        };
+    }
+
 }

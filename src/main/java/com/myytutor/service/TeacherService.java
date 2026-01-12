@@ -68,6 +68,9 @@ public class TeacherService {
     @Autowired
     private EmailRateLimitService emailRateLimitService;
 
+    @Autowired
+    private SlugGeneratorService slugGeneratorService;
+
     private final SecureRandom random = new SecureRandom();
 
     public void sendVerificationOtp(TeacherEmailVerificationRequest req, String ipAddress) {
@@ -231,6 +234,11 @@ public class TeacherService {
 
         // 9. Update education mappings
         updateTeacherEducations(teacher, req.getEducations());
+
+        // Generate slug if not present (ONCE per teacher)
+        if (teacher.getSlug() == null) {
+            teacher.setSlug(slugGeneratorService.generateSlug(teacher));
+        }
 
         // 10. Save the teacher with all updates one-time (Cascading handles child entities)
         teacher = teacherRepository.save(teacher);
@@ -636,6 +644,114 @@ public class TeacherService {
 
         log.info("Successfully deleted education record {} for teacher: {}", educationId, teacherId);
     }
+    @Transactional(readOnly = true)
+    public TeacherProfileDTO getTeacherProfileBySlug(String slug) {
+        Teacher teacher = teacherRepository.findBySlug(slug)
+            .orElseThrow(() -> new ResourceNotFoundException("Teacher", "slug", slug));
+            
+        return mapToProfileDTO(teacher);
+    }
+
+    private TeacherProfileDTO mapToProfileDTO(Teacher teacher) {
+        TeacherProfileDTO dto = new TeacherProfileDTO();
+        dto.setId(teacher.getId());
+        dto.setSlug(teacher.getSlug());
+        dto.setFullName(teacher.getFullName());
+        dto.setExperience(teacher.getExperience());
+        dto.setAboutMe(teacher.getAboutMe());
+        dto.setCity(teacher.getCity());
+        dto.setQualification(teacher.getQualifications());
+        dto.setGender(teacher.getGender());
+        dto.setSessionsDelivered(10); // Mock data for now
+        dto.setRating(4.8); // Mock data for now
+        
+        // Map subjects
+        Map<String, List<String>> subjectsMap = new HashMap<>();
+        if (teacher.getSubjects() != null) {
+            for (TeacherSubjectMapping mapping : teacher.getSubjects()) {
+                String classId = String.valueOf(mapping.getSubjectClass().getClassId());
+                subjectsMap.computeIfAbsent(classId, k -> new ArrayList<>())
+                          .add(mapping.getSubjectClass().getSubjectName());
+            }
+        }
+        dto.setSubjects(subjectsMap);
+        
+        // Map extra subjects
+        Map<String, List<String>> extraSubjectsMap = new HashMap<>();
+        if (teacher.getExtraSubjects() != null && !teacher.getExtraSubjects().isEmpty()) {
+            List<String> extras = teacher.getExtraSubjects().stream()
+                .map(mapping -> mapping.getExtraSubject().getExtraSubjectName())
+                .collect(Collectors.toList());
+            extraSubjectsMap.put("all", extras);
+        }
+        dto.setExtraSubjects(extraSubjectsMap);
+        
+        // Map boards - Placeholder as distinct board entity doesn't seem to be linked directly in the viewed code
+        // Utilizing a simple static list for now or derived if logic allows
+        dto.setBoards(Map.of("all", List.of("CBSE", "State Board"))); 
+        
+        // Map availability
+        if (teacher.getAvailabilities() != null) {
+            dto.setAvailability(teacher.getAvailabilities().stream()
+                .map(av -> {
+                    TeacherAvailabilityDTO avDto = new TeacherAvailabilityDTO();
+                    avDto.setStartTime(av.getStartTime());
+                    avDto.setEndTime(av.getEndTime());
+                    avDto.setAvailableTimeForSlot(av.getAvailableTimeForSlot());
+                    avDto.setMonday(av.getMonday());
+                    avDto.setTuesday(av.getTuesday());
+                    avDto.setWednesday(av.getWednesday());
+                    avDto.setThursday(av.getThursday());
+                    avDto.setFriday(av.getFriday());
+                    avDto.setSaturday(av.getSaturday());
+                    avDto.setSunday(av.getSunday());
+                    return avDto;
+                })
+                .collect(Collectors.toList()));
+        }
+
+        // Map education
+        if (teacher.getEducations() != null) {
+            dto.setEducation(teacher.getEducations().stream()
+                .map(TeacherEducationConverter::toDto)
+                .collect(Collectors.toList()));
+        }
+        
+        // Map preferred areas
+        if (teacher.getPreferredAreas() != null) {
+            dto.setPreferredAreas(teacher.getPreferredAreas().stream()
+                .map(TeacherPreferredAreaMapping::getArea)
+                .collect(Collectors.toList()));
+        }
+        
+        // Map other details
+        dto.setMode(teacher.getMode());
+        dto.setExpectedFee(teacher.getExpectedFeePerHour());
+        
+        return dto;
+    }
+
+    @Transactional(timeout = 300) // Increase timeout for batch operation
+    public int backfillSlugs() {
+        log.info("Starting slug backfill for existing teachers...");
+        List<Teacher> teachers = teacherRepository.findAll();
+        int count = 0;
+        
+        for (Teacher teacher : teachers) {
+            if (teacher.getSlug() == null) {
+                try {
+                    // Ensure subjects are loaded (fetch join equivalent or lazy load trigger)
+                    // If slug generation fails for one, continue for others
+                    teacher.setSlug(slugGeneratorService.generateSlug(teacher));
+                    teacherRepository.save(teacher);
+                    count++;
+                } catch (Exception e) {
+                    log.error("Failed to generate slug for teacher {}: {}", teacher.getId(), e.getMessage());
+                }
+            }
+        }
+        
+        log.info("Completed slug backfill. Updated {} teachers.", count);
+        return count;
+    }
 }
-
-

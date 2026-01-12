@@ -2,6 +2,7 @@ package com.myytutor.api;
 
 import com.myytutor.dto.TeacherEmailVerificationRequest;
 import com.myytutor.dto.TeacherOtpVerificationRequest;
+import com.myytutor.dto.TeacherProfileDTO;
 import com.myytutor.dto.TeacherRegistrationRequest;
 import com.myytutor.dto.ApiResponse;
 import com.myytutor.entity.Teacher;
@@ -81,6 +82,25 @@ public class TeacherController {
         Teacher registeredTeacher = teacherService.registerTeacher(request);
         return ResponseEntity.ok(new ApiResponse("success",
                 String.format("Teacher %s registered successfully!", registeredTeacher.getEmail())));
+    }
+
+    @Operation(summary = "Get teacher profile by slug", description = "Retrieves public teacher profile using SEO-friendly slug")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile retrieved successfully", content = @Content(schema = @Schema(implementation = TeacherProfileDTO.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Teacher not found", content = @Content(schema = @Schema(implementation = ApiResponse.class)))
+    })
+    @GetMapping(value = "/tutor/{slug}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TeacherProfileDTO> getTeacherBySlug(@PathVariable String slug) {
+        log.info("Fetching teacher profile for slug: {}", slug);
+        TeacherProfileDTO profile = teacherService.getTeacherProfileBySlug(slug);
+        return ResponseEntity.ok(profile);
+    }
+
+    @Operation(summary = "Backfill slugs for existing teachers", description = "Generates slugs for all teachers who don't have one")
+    @PostMapping(value = "/slug-backfill", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse> backfillSlugs() {
+        int count = teacherService.backfillSlugs();
+        return ResponseEntity.ok(new ApiResponse("success", "Backfilled slugs for " + count + " teachers"));
     }
 
 }

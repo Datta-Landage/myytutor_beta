@@ -6,17 +6,25 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "teacher", uniqueConstraints = { @UniqueConstraint(columnNames = { "email" }) }, indexes = {
+@Table(name = "teacher", uniqueConstraints = { 
+        @UniqueConstraint(columnNames = { "email" }),
+        @UniqueConstraint(columnNames = { "slug" })
+}, indexes = {
         @Index(name = "idx_teacher_email", columnList = "email"),
         @Index(name = "idx_teacher_email_verified", columnList = "email_verified"),
         @Index(name = "idx_teacher_created_at", columnList = "created_at"),
         @Index(name = "idx_teacher_email_verified_created", columnList = "email_verified,created_at"),
-        @Index(name = "idx_teacher_full_name_created", columnList = "full_name,created_at")
+        @Index(name = "idx_teacher_full_name_created", columnList = "full_name,created_at"),
+        @Index(name = "idx_teacher_slug", columnList = "slug")
 })
 public class Teacher {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // SEO-friendly slug - generated ONCE on approval, immutable after
+    @Column(unique = true)
+    private String slug;
 
     @Column
     private String fullName;
@@ -432,5 +440,14 @@ public class Teacher {
 
     public void setLockVersion(Long lockVersion) {
         this.lockVersion = lockVersion;
+    }
+
+    // Slug getters/setters
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 }
