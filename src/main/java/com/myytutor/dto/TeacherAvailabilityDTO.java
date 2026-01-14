@@ -10,6 +10,16 @@ public class TeacherAvailabilityDTO {
     @Max(value = 1440, message = "Start time must be between 0 and 1440 minutes (0:00 to 24:00)")
     private Integer startTime; // minutes since midnight (0-1440)
 
+    private Long id;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     @NotNull(message = "End time is required")
     @Min(value = 0, message = "End time must be between 0 and 1440 minutes (0:00 to 24:00)")
     @Max(value = 1440, message = "End time must be between 0 and 1440 minutes (0:00 to 24:00)")

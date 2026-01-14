@@ -33,6 +33,9 @@ public class Teacher {
     private String email;
 
     @Column
+    private String pendingNewEmail;
+
+    @Column
     private String phoneNumber;
 
     @Column
@@ -172,6 +175,14 @@ public class Teacher {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPendingNewEmail() {
+        return pendingNewEmail;
+    }
+
+    public void setPendingNewEmail(String pendingNewEmail) {
+        this.pendingNewEmail = pendingNewEmail;
     }
 
     public String getPhoneNumber() {

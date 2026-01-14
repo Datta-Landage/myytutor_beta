@@ -61,6 +61,13 @@ public class EnvironmentValidator {
     @Value("${GOOGLE_API_KEY:#{null}}")
     private String googleApiKey;
 
+    // Mail SSL settings for logging
+    @Value("${spring.mail.properties.mail.smtp.ssl.enable:false}")
+    private String mailSslEnabled;
+
+    @Value("${spring.mail.properties.mail.smtp.starttls.enable:false}")
+    private String mailStartTlsEnabled;
+
     // WhatsApp (OPTIONAL - depends on provider)
     @Value("${whatsapp.provider:twilio}")
     private String whatsappProvider;
@@ -146,6 +153,8 @@ public class EnvironmentValidator {
         log.info("All critical environment variables are present");
         log.info("Database: {}:{}/{}", dbHost, dbPort, dbName);
         log.info("Mail Server: {}:{}", mailHost, mailPort);
+        log.info("Mail SSL Enabled: {}", mailSslEnabled);
+        log.info("Mail STARTTLS Enabled: {}", mailStartTlsEnabled);
         log.info("==========================================");
     }
 

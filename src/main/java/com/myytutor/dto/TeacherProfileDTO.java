@@ -2,6 +2,7 @@ package com.myytutor.dto;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -21,9 +22,20 @@ public class TeacherProfileDTO {
     private String city;
     private String qualification;
     private String gender;
+    private String phoneNumber;
+    private String whatsappNumber;
+    private String hasVehicle;
+    private String address;
+    private String pin;
+    private String state;
+    private String country;
     
     // Subject mapping: Class Level -> List of Subjects
     private Map<String, List<String>> subjects;
+    
+    // Raw IDs for easier frontend management
+    private Set<Long> rawSubjectIds;
+    private Set<Long> rawExtraSubjectIds;
     
     // Extra subjects
     private Map<String, List<String>> extraSubjects;

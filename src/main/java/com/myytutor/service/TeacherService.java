@@ -326,6 +326,202 @@ public class TeacherService {
         log.info("Added {} availabilities to teacher collection", availabilityDTOs.size());
     }
 
+    @Transactional(readOnly = true)
+    public List<TeacherAvailabilityDTO> getTeacherAvailability(String email) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+
+        if (teacher.getAvailabilities() == null) {
+            return Collections.emptyList();
+        }
+
+        return teacher.getAvailabilities().stream()
+                .map(av -> {
+                    TeacherAvailabilityDTO dto = new TeacherAvailabilityDTO();
+                    dto.setId(av.getId());
+                    dto.setStartTime(av.getStartTime());
+                    dto.setEndTime(av.getEndTime());
+                    dto.setAvailableTimeForSlot(av.getAvailableTimeForSlot());
+                    dto.setMonday(av.getMonday());
+                    dto.setTuesday(av.getTuesday());
+                    dto.setWednesday(av.getWednesday());
+                    dto.setThursday(av.getThursday());
+                    dto.setFriday(av.getFriday());
+                    dto.setSaturday(av.getSaturday());
+                    dto.setSunday(av.getSunday());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public TeacherDashboardStatsDTO getTeacherDashboardStats(String email) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+
+        return TeacherDashboardStatsDTO.builder()
+                .fullName(teacher.getFullName())
+                .sessionsDelivered(0)
+                .rating(5.0)
+                .subjectsCount(teacher.getSubjects() != null ? teacher.getSubjects().size() : 0)
+                // Add logic for profile completeness if needed, for now defaulting or calculating simple one
+                .profileComplete(true) 
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public TeacherPersonalInfoDTO getTeacherPersonalInfo(String email) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+
+        TeacherPersonalInfoDTO dto = new TeacherPersonalInfoDTO();
+        dto.setId(teacher.getId());
+        dto.setFullName(teacher.getFullName());
+        // dto.setProfilePhoto(teacher.getProfilePhoto()); // Accessor needed if field exists
+        dto.setExperience(teacher.getExperience());
+        dto.setAboutMe(teacher.getAboutMe());
+        dto.setCity(teacher.getCity());
+        dto.setQualification(teacher.getQualifications()); // Note: entity has 'qualifications' string, DTO usually expects this
+        dto.setGender(teacher.getGender());
+        dto.setPhoneNumber(teacher.getPhoneNumber());
+        dto.setWhatsappNumber(teacher.getWhatsappNumber());
+        dto.setHasVehicle(teacher.getHasVehicle());
+        dto.setAddress(teacher.getAddress());
+        dto.setPin(teacher.getPin());
+        dto.setState(teacher.getState());
+        dto.setCountry(teacher.getCountry());
+        
+        if (teacher.getPreferredAreas() != null) {
+             dto.setPreferredAreas(teacher.getPreferredAreas().stream()
+                     .map(TeacherPreferredAreaMapping::getArea)
+                     .collect(Collectors.toList()));
+        }
+        
+        dto.setMode(teacher.getMode());
+        dto.setExpectedFee(teacher.getExpectedFeePerHour());
+        dto.setEmail(teacher.getEmail());
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TeacherEducationDTO> getTeacherEducation(String email) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+
+        if (teacher.getEducations() == null) {
+            return Collections.emptyList();
+        }
+
+        return teacher.getEducations().stream()
+                .map(TeacherEducationConverter::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public TeacherSubjectsDTO getTeacherSubjects(String email) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+
+        TeacherSubjectsDTO dto = new TeacherSubjectsDTO();
+        
+        // Populate using existing logic logic re-used from mapToProfileDTO or abstracted
+        // For brevity, duplicating logic or ideally extracting to helper
+        // Using same logic as mapToProfileDTO for subjects
+        
+        // 1. Subjects
+        Map<String, List<String>> subjectsMap = new HashMap<>();
+        if (teacher.getSubjects() != null) {
+            for (TeacherSubjectMapping mapping : teacher.getSubjects()) {
+                String className = String.valueOf(mapping.getSubjectClass().getClassId());
+                String subjectName = mapping.getSubjectClass().getSubjectName();
+                subjectsMap.computeIfAbsent(className, k -> new ArrayList<>()).add(subjectName);
+            }
+        }
+        dto.setSubjects(subjectsMap);
+
+        // 2. Extra Subjects
+        Map<String, List<String>> extraSubjectsMap = new HashMap<>();
+        if (teacher.getExtraSubjects() != null) {
+            for (TeacherExtraSubjectMapping mapping : teacher.getExtraSubjects()) {
+                // Grouping by "all" or specific category if needed. Previous DTO used "all"
+                extraSubjectsMap.computeIfAbsent("all", k -> new ArrayList<>()).add(mapping.getExtraSubject().getExtraSubjectName());
+            }
+        }
+        dto.setExtraSubjects(extraSubjectsMap);
+        
+        // 3. Raw IDs
+        if (teacher.getSubjects() != null) {
+            dto.setRawSubjectIds(teacher.getSubjects().stream()
+                .map(mapping -> mapping.getSubjectClass().getId())
+                .collect(Collectors.toSet()));
+        }
+        
+        if (teacher.getExtraSubjects() != null) {
+            dto.setRawExtraSubjectIds(teacher.getExtraSubjects().stream()
+                .map(mapping -> mapping.getExtraSubject().getId())
+                .collect(Collectors.toSet()));
+        }
+
+        // 4. Boards (Derived)
+        Map<String, List<String>> boardsMap = new HashMap<>();
+        // Logic to extract boards from subjects if available in entity graph
+        // Assuming boards are derived from subject class or similar
+        // For now leaving empty or simple logic as per existing mapToProfileDTO if any
+        dto.setBoards(boardsMap);
+
+        return dto;
+    }
+
+    @Transactional
+    public TeacherAvailabilityDTO updateTeacherAvailabilitySlot(String email, Long availabilityId, TeacherAvailabilityDTO dto) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+
+        TeacherAvailability availability = teacherAvailabilityRepository.findById(availabilityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Availability", "id", availabilityId));
+
+        // Security check: ensure availability belongs to the requesting teacher
+        if (!availability.getTeacher().getId().equals(teacher.getId())) {
+             throw new IllegalArgumentException("Availability slot does not belong to this teacher");
+        }
+        
+        if (dto.getStartTime() >= dto.getEndTime()) {
+            throw new IllegalArgumentException("End time must be after start time");
+        }
+
+        availability.setStartTime(dto.getStartTime());
+        availability.setEndTime(dto.getEndTime());
+        availability.setAvailableTimeForSlot(dto.getAvailableTimeForSlot());
+        availability.setMonday(dto.getMonday());
+        availability.setTuesday(dto.getTuesday());
+        availability.setWednesday(dto.getWednesday());
+        availability.setThursday(dto.getThursday());
+        availability.setFriday(dto.getFriday());
+        availability.setSaturday(dto.getSaturday());
+        availability.setSunday(dto.getSunday());
+        
+        // Recalculate total availability (triggered by @PreUpdate in entity, but good to be explicit if needed, 
+        // though JPA entity methods handle it)
+        
+        TeacherAvailability saved = teacherAvailabilityRepository.save(availability);
+        
+        // Return updated DTO
+        dto.setId(saved.getId());
+        return dto;
+    }
+
     private void validateAndUpdateAgreements(Teacher teacher, TeacherAgreementDTO agreementDTO) {
         if (agreementDTO == null) {
             throw new IllegalArgumentException("Teacher agreement is required");
@@ -662,6 +858,15 @@ public class TeacherService {
         dto.setCity(teacher.getCity());
         dto.setQualification(teacher.getQualifications());
         dto.setGender(teacher.getGender());
+        dto.setPhoneNumber(teacher.getPhoneNumber());
+        dto.setWhatsappNumber(teacher.getWhatsappNumber());
+        dto.setHasVehicle(teacher.getHasVehicle());
+        dto.setAddress(teacher.getAddress());
+        dto.setPin(teacher.getPin());
+        dto.setState(teacher.getState());
+        dto.setCountry(teacher.getCountry());
+        dto.setMode(teacher.getMode());
+        dto.setExpectedFee(teacher.getExpectedFeePerHour());
         dto.setSessionsDelivered(10); // Mock data for now
         dto.setRating(4.8); // Mock data for now
         
@@ -685,6 +890,18 @@ public class TeacherService {
             extraSubjectsMap.put("all", extras);
         }
         dto.setExtraSubjects(extraSubjectsMap);
+
+        // Populate Raw IDs for easier frontend management
+        if (teacher.getSubjects() != null) {
+            dto.setRawSubjectIds(teacher.getSubjects().stream()
+                .map(m -> m.getSubjectClass().getId())
+                .collect(Collectors.toSet()));
+        }
+        if (teacher.getExtraSubjects() != null) {
+            dto.setRawExtraSubjectIds(teacher.getExtraSubjects().stream()
+                .map(m -> m.getExtraSubject().getId())
+                .collect(Collectors.toSet()));
+        }
         
         // Map boards - Placeholder as distinct board entity doesn't seem to be linked directly in the viewed code
         // Utilizing a simple static list for now or derived if logic allows
@@ -695,6 +912,7 @@ public class TeacherService {
             dto.setAvailability(teacher.getAvailabilities().stream()
                 .map(av -> {
                     TeacherAvailabilityDTO avDto = new TeacherAvailabilityDTO();
+                    avDto.setId(av.getId());
                     avDto.setStartTime(av.getStartTime());
                     avDto.setEndTime(av.getEndTime());
                     avDto.setAvailableTimeForSlot(av.getAvailableTimeForSlot());
@@ -753,5 +971,257 @@ public class TeacherService {
         
         log.info("Completed slug backfill. Updated {} teachers.", count);
         return count;
+    }
+
+    @Transactional(readOnly = true)
+    public Teacher findByEmail(String email) {
+        return teacherRepository.findByEmail(email);
+    }
+
+    @Transactional(readOnly = true)
+    public TeacherProfileDTO getMyProfile(String email) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+        return mapToProfileDTO(teacher);
+    }
+
+    @Transactional(timeout = 30)
+    public TeacherProfileDTO updateProfile(String email, TeacherUpdateDTO dto) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", email);
+        }
+
+        // Update fields if provided in DTO
+        if (dto.getFullName() != null) {
+            teacher.setFullName(htmlSanitizer.sanitizeNotEmpty(dto.getFullName()));
+        }
+        // Removed direct email update. Email update must go through initiateEmailUpdate flow.
+        if (dto.getPhoneNumber() != null) {
+            teacher.setPhoneNumber(dto.getPhoneNumber());
+        }
+        if (dto.getWhatsappNumber() != null) {
+            teacher.setWhatsappNumber(dto.getWhatsappNumber());
+        }
+        if (dto.getAboutMe() != null) {
+            teacher.setAboutMe(htmlSanitizer.sanitize(dto.getAboutMe()));
+        }
+        if (dto.getExperience() != null) {
+            teacher.setExperience(dto.getExperience());
+        }
+        if (dto.getGender() != null) {
+            teacher.setGender(validateGender(dto.getGender()));
+        }
+        if (dto.getHasVehicle() != null) {
+            teacher.setHasVehicle(dto.getHasVehicle());
+        }
+        if (dto.getAddress() != null) {
+            teacher.setAddress(htmlSanitizer.sanitizeNotEmpty(dto.getAddress()));
+        }
+        if (dto.getCity() != null) {
+            teacher.setCity(dto.getCity());
+        }
+        if (dto.getPin() != null) {
+            teacher.setPin(dto.getPin());
+        }
+        if (dto.getState() != null) {
+            teacher.setState(dto.getState());
+        }
+        if (dto.getCountry() != null) {
+            teacher.setCountry(dto.getCountry());
+        }
+        if (dto.getMode() != null) {
+            teacher.setMode(dto.getMode());
+        }
+        if (dto.getExpectedFeePerHour() != null) {
+            teacher.setExpectedFeePerHour(dto.getExpectedFeePerHour());
+        }
+        if (dto.getQualification() != null) {
+            teacher.setQualifications(htmlSanitizer.sanitize(dto.getQualification()));
+        }
+
+        // Complex mappings
+        if (dto.getSubjectIds() != null) {
+            updateSubjectMappings(teacher, dto.getSubjectIds());
+        }
+        if (dto.getExtraSubjectIds() != null) {
+            updateExtraSubjectMappings(teacher, dto.getExtraSubjectIds());
+        }
+        if (dto.getEducations() != null) {
+            updateTeacherEducations(teacher, dto.getEducations());
+        }
+        if (dto.getAvailabilities() != null) {
+            updateTeacherAvailabilities(teacher, dto.getAvailabilities());
+        }
+        if (dto.getPreferredAreas() != null) {
+            updatePreferredAreas(teacher, new java.util.HashSet<>(dto.getPreferredAreas()));
+        }
+
+        teacher.setUpdatedAt(LocalDateTime.now());
+        
+        // Save and return mapped DTO
+        return mapToProfileDTO(teacherRepository.save(teacher));
+    }
+
+    @Transactional(timeout = 30)
+    public void initiatePasswordReset(String email) {
+        Teacher teacher = teacherRepository.findByEmail(email);
+        if (teacher == null) {
+            // Log but don't reveal to avoid email harvesting
+            log.warn("Password reset requested for non-existent email: {}", email);
+            return;
+        }
+
+        // Generate reset OTP
+        String otp = String.format("%06d", random.nextInt(1000000));
+        teacher.setEmailOtp(otp);
+        teacher.setEmailOtpGeneratedAt(LocalDateTime.now());
+        teacher.setOtpAttempts(0); // Reset attempts
+        teacherRepository.save(teacher);
+
+        emailService.sendPasswordResetOtp(email, otp);
+        log.info("Initiated password reset for email: {}", email);
+    }
+
+    @Transactional(timeout = 30)
+    public void resetPassword(PasswordResetVerifyRequest req) {
+        Teacher teacher = teacherRepository.findByEmail(req.getEmail());
+        if (teacher == null) {
+            throw new IllegalArgumentException("Invalid request");
+        }
+
+        // Verify OTP (Check expiry etc same as registration)
+        if (teacher.getEmailOtp() == null || teacher.getEmailOtpGeneratedAt() == null) {
+            throw new IllegalArgumentException("No reset request found");
+        }
+
+        if (teacher.getEmailOtpGeneratedAt().plusMinutes(5).isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("OTP has expired");
+        }
+
+        if (!teacher.getEmailOtp().equals(req.getOtp())) {
+            throw new IllegalArgumentException("Invalid OTP");
+        }
+
+        // Validate password complexity
+        validatePasswordComplexity(req.getNewPassword());
+
+        // Update password
+        teacher.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        teacher.setEmailOtp(null); // Clear OTP
+        teacher.setEmailOtpGeneratedAt(null);
+        teacher.setUpdatedAt(LocalDateTime.now());
+        teacherRepository.save(teacher);
+
+        log.info("Password successfully reset for email: {}", req.getEmail());
+    }
+
+    @Transactional(timeout = 30)
+    public void updateTeacherSubjects(String email, Set<Long> subjectIds) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) throw new ResourceNotFoundException("Teacher", "email", email);
+        updateSubjectMappings(teacher, subjectIds);
+        teacherRepository.save(teacher);
+    }
+
+    @Transactional(timeout = 30)
+    public void updateTeacherExtraSubjects(String email, Set<Long> extraSubjectIds) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) throw new ResourceNotFoundException("Teacher", "email", email);
+        updateExtraSubjectMappings(teacher, extraSubjectIds);
+        teacherRepository.save(teacher);
+    }
+
+    @Transactional(timeout = 30)
+    public void updateTeacherAvailabilities(String email, List<TeacherAvailabilityDTO> availabilityDTOs) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) throw new ResourceNotFoundException("Teacher", "email", email);
+        updateTeacherAvailabilities(teacher, availabilityDTOs);
+        teacherRepository.save(teacher);
+    }
+
+    @Transactional(timeout = 30)
+    public void updateTeacherEducations(String email, List<TeacherEducationDTO> educationDTOs) {
+        Teacher teacher = findByEmail(email);
+        if (teacher == null) throw new ResourceNotFoundException("Teacher", "email", email);
+        updateTeacherEducations(teacher, educationDTOs);
+        teacherRepository.save(teacher);
+    }
+
+    @Transactional(timeout = 30)
+    public void initiateEmailUpdate(String currentEmail, String newEmail) {
+        if (newEmail == null || newEmail.isBlank()) {
+            throw new IllegalArgumentException("New email is required");
+        }
+        if (currentEmail.equalsIgnoreCase(newEmail)) {
+            throw new IllegalArgumentException("New email must be different from current email");
+        }
+
+        Teacher teacher = findByEmail(currentEmail);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", currentEmail);
+        }
+
+        // Check if new email is already taken
+        Teacher existing = teacherRepository.findByEmail(newEmail);
+        if (existing != null) {
+            throw new IllegalArgumentException("Email already in use by another account");
+        }
+
+        // Generate OTP
+        String otp = String.format("%06d", random.nextInt(1000000));
+        
+        // Update teacher record
+        teacher.setPendingNewEmail(newEmail);
+        teacher.setEmailOtp(otp);
+        teacher.setEmailOtpGeneratedAt(LocalDateTime.now());
+        teacher.setOtpAttempts(0);
+        teacherRepository.save(teacher);
+
+        // Send OTP to NEW email
+        emailService.sendOtp(newEmail, otp);
+        log.info("Initiated email update for teacher {}. OTP sent to {}", teacher.getId(), newEmail);
+    }
+
+    @Transactional(timeout = 30)
+    public void verifyEmailUpdate(String currentEmail, String otp) {
+        Teacher teacher = findByEmail(currentEmail);
+        if (teacher == null) {
+            throw new ResourceNotFoundException("Teacher", "email", currentEmail);
+        }
+
+        if (teacher.getPendingNewEmail() == null) {
+            throw new IllegalArgumentException("No pending email update found");
+        }
+
+        // Validate OTP (Same logic as other OTP checks)
+        if (teacher.getEmailOtp() == null || teacher.getEmailOtpGeneratedAt() == null) {
+            throw new IllegalArgumentException("OTP expired or invalid");
+        }
+        
+        if (teacher.getEmailOtpGeneratedAt().plusMinutes(5).isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("OTP has expired");
+        }
+
+        if (!teacher.getEmailOtp().equals(otp)) {
+            teacher.setOtpAttempts((teacher.getOtpAttempts() == null ? 0 : teacher.getOtpAttempts()) + 1);
+            teacherRepository.save(teacher);
+            throw new IllegalArgumentException("Invalid OTP");
+        }
+
+        // Update Email
+        String oldEmail = teacher.getEmail();
+        teacher.setEmail(teacher.getPendingNewEmail());
+        
+        // Clear pending fields
+        teacher.setPendingNewEmail(null);
+        teacher.setEmailOtp(null);
+        teacher.setEmailOtpGeneratedAt(null);
+        teacher.setOtpAttempts(0);
+        
+        teacherRepository.save(teacher);
+        log.info("Successfully updated email for teacher {} from {} to {}", teacher.getId(), oldEmail, teacher.getEmail());
     }
 }

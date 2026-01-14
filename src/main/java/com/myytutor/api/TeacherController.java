@@ -4,10 +4,19 @@ import com.myytutor.dto.TeacherEmailVerificationRequest;
 import com.myytutor.dto.TeacherOtpVerificationRequest;
 import com.myytutor.dto.TeacherProfileDTO;
 import com.myytutor.dto.TeacherRegistrationRequest;
+import com.myytutor.dto.TeacherDashboardStatsDTO;
+import com.myytutor.dto.TeacherPersonalInfoDTO;
+import com.myytutor.dto.TeacherSubjectsDTO;
+import com.myytutor.dto.TeacherEducationDTO;
 import com.myytutor.dto.ApiResponse;
 import com.myytutor.entity.Teacher;
 import com.myytutor.service.TeacherService;
 import com.myytutor.util.IpAddressExtractor;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -94,6 +103,118 @@ public class TeacherController {
         log.info("Fetching teacher profile for slug: {}", slug);
         TeacherProfileDTO profile = teacherService.getTeacherProfileBySlug(slug);
         return ResponseEntity.ok(profile);
+    }
+
+    @Operation(summary = "Get current teacher profile", description = "Retrieves the profile of the currently authenticated teacher")
+    @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TeacherProfileDTO> getMyProfile() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        log.info("Fetching logged-in teacher profile for email: {}", email);
+        TeacherProfileDTO profile = teacherService.getMyProfile(email);
+        return ResponseEntity.ok(profile);
+    }
+
+    @Operation(summary = "Update teacher profile", description = "Updates the profile of the currently authenticated teacher")
+    @PutMapping(value = "/profile", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TeacherProfileDTO> updateProfile(@RequestBody com.myytutor.dto.TeacherUpdateDTO request) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        log.info("Updating profile for teacher email: {}", email);
+        TeacherProfileDTO updatedProfile = teacherService.updateProfile(email, request);
+        return ResponseEntity.ok(updatedProfile);
+    }
+
+    @Operation(summary = "Initiate email update", description = "Sends OTP to the new email address")
+    @PostMapping(value = "/email-update/initiate", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> initiateEmailUpdate(@RequestBody com.myytutor.dto.EmailUpdateInitiateRequest request) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        teacherService.initiateEmailUpdate(email, request.getNewEmail());
+        return ResponseEntity.ok(Map.of("message", "OTP sent to new email address"));
+    }
+
+    @Operation(summary = "Verify email update", description = "Verifies OTP and updates email")
+    @PostMapping(value = "/email-update/verify", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> verifyEmailUpdate(@RequestBody com.myytutor.dto.EmailUpdateVerifyRequest request) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        teacherService.verifyEmailUpdate(email, request.getOtp());
+        return ResponseEntity.ok(Map.of("message", "Email updated successfully"));
+    }
+
+    @Operation(summary = "Update teacher subjects", description = "Updates the subject mappings for the currently authenticated teacher")
+    @PutMapping(value = "/subjects", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse> updateSubjects(@RequestBody Set<Long> subjectIds) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        teacherService.updateTeacherSubjects(email, subjectIds);
+        return ResponseEntity.ok(new ApiResponse("success", "Subjects updated successfully"));
+    }
+
+    @Operation(summary = "Update teacher extra subjects", description = "Updates the extra subject mappings for the currently authenticated teacher")
+    @PutMapping(value = "/extra-subjects", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse> updateExtraSubjects(@RequestBody Set<Long> extraSubjectIds) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        teacherService.updateTeacherExtraSubjects(email, extraSubjectIds);
+        return ResponseEntity.ok(new ApiResponse("success", "Extra subjects updated successfully"));
+    }
+
+    @Operation(summary = "Update teacher availability", description = "Updates the availability slots for the currently authenticated teacher")
+    @PutMapping(value = "/availability", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse> updateAvailability(@RequestBody List<com.myytutor.dto.TeacherAvailabilityDTO> availabilityDTOs) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        teacherService.updateTeacherAvailabilities(email, availabilityDTOs);
+        return ResponseEntity.ok(new ApiResponse("success", "Availability updated successfully"));
+    }
+
+    @Operation(summary = "Get teacher availability", description = "Retrieves the availability slots for the currently authenticated teacher")
+    @GetMapping(value = "/me/availability", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<com.myytutor.dto.TeacherAvailabilityDTO>> getMyAvailability() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        List<com.myytutor.dto.TeacherAvailabilityDTO> availability = teacherService.getTeacherAvailability(email);
+        return ResponseEntity.ok(availability);
+    }
+
+    @Operation(summary = "Update specific availability slot", description = "Updates a specific availability slot by ID")
+    @PutMapping(value = "/availability/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<com.myytutor.dto.TeacherAvailabilityDTO> updateAvailabilitySlot(
+            @PathVariable Long id,
+            @RequestBody com.myytutor.dto.TeacherAvailabilityDTO dto) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        com.myytutor.dto.TeacherAvailabilityDTO updated = teacherService.updateTeacherAvailabilitySlot(email, id, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @Operation(summary = "Get teacher dashboard stats", description = "Retrieves lightweight stats for the dashboard home")
+    @GetMapping(value = "/me/dashboard-stats", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TeacherDashboardStatsDTO> getDashboardStats() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(teacherService.getTeacherDashboardStats(email));
+    }
+
+    @Operation(summary = "Get teacher personal info", description = "Retrieves personal information for the profile page")
+    @GetMapping(value = "/me/personal-info", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TeacherPersonalInfoDTO> getPersonalInfo() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(teacherService.getTeacherPersonalInfo(email));
+    }
+
+    @Operation(summary = "Get teacher education", description = "Retrieves education records")
+    @GetMapping(value = "/me/education", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<TeacherEducationDTO>> getMyEducation() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(teacherService.getTeacherEducation(email));
+    }
+
+    @Operation(summary = "Get teacher subjects", description = "Retrieves subject mappings")
+    @GetMapping(value = "/me/subjects", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TeacherSubjectsDTO> getMySubjects() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(teacherService.getTeacherSubjects(email));
+    }
+
+    @Operation(summary = "Update teacher education", description = "Updates the education records for the currently authenticated teacher")
+    @PutMapping(value = "/education", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse> updateEducation(@RequestBody List<com.myytutor.dto.TeacherEducationDTO> educationDTOs) {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        teacherService.updateTeacherEducations(email, educationDTOs);
+        return ResponseEntity.ok(new ApiResponse("success", "Education records updated successfully"));
     }
 
     @Operation(summary = "Backfill slugs for existing teachers", description = "Generates slugs for all teachers who don't have one")

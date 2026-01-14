@@ -26,6 +26,9 @@ public class WebSecurityConfig {
     @Autowired
     private FrontendKeyFilter frontendKeyFilter;
 
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
     // CSV list or "*" for all
     @Value("${app.cors.allowed-origins:}")
     private String allowedOrigins;
@@ -40,8 +43,15 @@ public class WebSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/teachers/register").permitAll()
+                        .requestMatchers("/api/v1/teachers/send-otp").permitAll()
+                        .requestMatchers("/api/v1/teachers/verify-otp").permitAll()
+                        .requestMatchers("/api/v1/teachers/tutor/**").permitAll()
+                        .anyRequest().permitAll()) // Keep permitAll for now to avoid breaking existing flows, but filter will set auth context
                 .addFilterBefore(frontendKeyFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable());
 

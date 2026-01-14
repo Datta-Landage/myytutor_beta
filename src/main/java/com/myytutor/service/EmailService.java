@@ -203,6 +203,34 @@ public class EmailService {
         }
     }
 
+    @Async
+    public void sendPasswordResetOtp(String to, String otp) {
+        try {
+            Context context = new Context();
+            context.setVariable("subject", "🔑 Password Reset Request - MyyTutor");
+            context.setVariable("otp", otp);
+
+            String resetContent = templateEngine.process("email/password_reset_otp", context);
+            context.setVariable("body", resetContent);
+            String finalContent = templateEngine.process("email/layout", context);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("🔑 Password Reset Request - MyyTutor");
+            helper.setText(finalContent, true);
+
+            ClassPathResource logoResource = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logoResource);
+
+            mailSender.send(message);
+            log.info("Password reset OTP sent to: {}", to);
+        } catch (Exception e) {
+            log.error("CRITICAL: Failed to send password reset OTP to: {}", to, e);
+        }
+    }
+
     /**
      * Getter for JavaMailSender (used by schedulers)
      */
